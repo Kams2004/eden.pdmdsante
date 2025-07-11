@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Send, AlertCircle, Clock, CheckCircle, XCircle, Filter, Search, MessageSquare } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import Pagination from '../UI/Pagination';
+import axiosInstance from '../../api/axioConfig'; // Adjust the import path as necessary
 
 interface Request {
   id: string;
@@ -81,37 +82,61 @@ const RequestsView: React.FC = () => {
     }
   ]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedRequest) return;
+    if (!selectedRequest || !customMessage) return;
 
     const selectedPredefinedRequest = predefinedRequests.find(r => r.id === selectedRequest);
     if (!selectedPredefinedRequest) return;
 
-    const newRequest: Request = {
-      id: String(sentRequests.length + 1),
-      type: selectedPredefinedRequest.title,
-      description: selectedPredefinedRequest.description,
-      urgency,
-      status: 'pending',
-      customMessage,
-      createdAt: new Date().toLocaleString(),
-      updatedAt: new Date().toLocaleString()
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+
+    // Extract only the required fields from userData
+    const { email, first_name, last_name } = userData;
+
+    const requestData = {
+      administration: false,
+      commission: selectedRequest === 'commission-mismatch',
+      connection: false,
+      email,
+      error: selectedRequest === 'system-error',
+      first_name,
+      last_name,
+      message: customMessage,
+      revendication_examen: selectedRequest === 'patient-record',
+      suggestion: selectedRequest === 'payment-delay'
     };
 
-    setSentRequests([newRequest, ...sentRequests]);
-    showSuccessToast('Request sent successfully');
-    
-    // Reset form
-    setSelectedRequest('');
-    setCustomMessage('');
-    setUrgency('low');
+    try {
+      const response = await axiosInstance.post('/requete/add', requestData);
+      showSuccessToast('Request sent successfully');
+
+      const newRequest: Request = {
+        id: String(sentRequests.length + 1),
+        type: selectedPredefinedRequest.title,
+        description: selectedPredefinedRequest.description,
+        urgency,
+        status: 'pending',
+        customMessage,
+        createdAt: new Date().toLocaleString(),
+        updatedAt: new Date().toLocaleString()
+      };
+
+      setSentRequests([newRequest, ...sentRequests]);
+
+      // Reset form
+      setSelectedRequest('');
+      setCustomMessage('');
+      setUrgency('low');
+    } catch (error) {
+      console.error('Error sending request:', error);
+    }
   };
 
   // Filter and pagination logic
   const filteredRequests = sentRequests.filter(request => {
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
-    const matchesSearch = 
+    const matchesSearch =
       request.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (request.customMessage || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -190,7 +215,7 @@ const RequestsView: React.FC = () => {
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={!selectedRequest}
+              disabled={!selectedRequest || !customMessage}
               className="flex items-center px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4 mr-2" />
@@ -257,7 +282,6 @@ const RequestsView: React.FC = () => {
                   </span>
                 </div>
               </div>
-              
               <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
                 <span>Created: {request.createdAt}</span>
                 <span>Last Updated: {request.updatedAt}</span>

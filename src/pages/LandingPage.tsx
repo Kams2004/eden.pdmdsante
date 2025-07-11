@@ -1,29 +1,52 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import pdmdLogo from "./pdmd.png"; // Replace with the correct path to your logo
-import imgBackground from "./img.png"; // Replace with the correct path to your image
+import pdmdLogo from "./pdmd.png";
+import imgBackground from "./img.png";
+import axios from 'axios';
+
+const BASE_URL = 'http://65.21.73.170:7600';
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [id, setId] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleConnexion = () => {
-    navigate("/login"); // Navigate to login page
-  };
-
-  const handleSendEmail = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Prevent form submission reload
+  const handleSendId = async (e) => {
+    e.preventDefault();
     setError("");
     setSuccessMessage("");
-    // Simulate email submission without actual HTTP requests
-    if (email) {
-      setSuccessMessage("E-mail envoyé avec succès !");
-      setTimeout(() => setSuccessMessage(""), 3000);
-    } else {
-      setError("Veuillez entrer une adresse e-mail valide.");
+    setLoading(true);
+
+    if (!id) {
+      setError("Veuillez entrer un Matricule ou ID de fédération valide.");
       setTimeout(() => setError(""), 3000);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${BASE_URL}/users/send_email/`, {
+        federation_id: id
+      });
+
+      if (response.data.Message === "Identifiants Envoyés avec succès") {
+        setSuccessMessage("Envoyé avec succès. Vous recevrez un e-mail contenant vos identifiants de connexion.");
+        setTimeout(() => {
+          navigate("/login", { state: { username: response.data.Username } });
+        }, 3000);
+      } else {
+        setError(response.data.Message || "Erreur lors de l'envoi de l'ID.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.Message || "Erreur lors de l'envoi de l'ID.");
+    } finally {
+      setLoading(false);
+      setTimeout(() => {
+        setError("");
+        setSuccessMessage("");
+      }, 3000);
     }
   };
 
@@ -32,42 +55,34 @@ const LandingPage = () => {
       {/* Left Section */}
       <div className="w-full md:w-1/3 bg-gray-50 p-8 md:p-12 flex flex-col justify-start items-center space-y-4">
         <img src={pdmdLogo} alt="Logo PDMD" className="h-24 mb-4" />
-        <h2 className="text-2xl font-bold text-blue-600">Connectez-vous à votre compte</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Vous n'avez pas de compte ? {" "}
-          <a href="/send-request" className="text-blue-500 hover:underline">
-            Inscrivez-vous
-          </a>
-        </p>
-        <button
-          className="w-full py-2 px-4 border-2 border-blue-500 text-blue-500 bg-white rounded-lg hover:bg-blue-50 transition"
-          onClick={handleConnexion}
-        >
-          Connexion
-        </button>
-        <div className="w-full my-4 flex items-center">
-          <div className="flex-grow border-t border-gray-300"></div>
-          <span className="mx-2 text-sm text-gray-500">ou</span>
-          <div className="flex-grow border-t border-gray-300"></div>
-        </div>
-        <form onSubmit={handleSendEmail} className="w-full space-y-4">
+        <h2 className="text-2xl font-bold text-blue-600">Veuillez entrer votre Matricule</h2>
+        <form onSubmit={handleSendId} className="w-full space-y-4">
           {successMessage && (
-            <p className="text-green-600 text-sm">{successMessage}</p>
+            <div className="p-3 bg-green-100 text-green-700 rounded-md">
+              {successMessage}
+            </div>
           )}
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+          {error && (
+            <div className="p-3 bg-red-100 text-red-700 rounded-md">
+              {error}
+            </div>
+          )}
           <input
-            type="email"
-            placeholder="Adresse email"
+            type="text"
+            placeholder="Matricule"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={id}
+            onChange={(e) => setId(e.target.value)}
             required
           />
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            disabled={loading}
+            className={`w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center ${
+              loading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            Envoyer
+            {loading ? "Envoi en cours..." : "Envoyer"}
           </button>
         </form>
       </div>

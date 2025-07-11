@@ -1,92 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axiosInstance from '../../api/axioConfig';
 import { Plus, Pencil, Trash2, Search, MoreVertical } from 'lucide-react';
 import UserModal from '../../components/admin/UserModal';
+import DeleteConfirmationModal from '../../pages/admin/DeleteConfirmationModal';
+import Notification from '../../pages/admin/Notification';
+
+interface Role {
+  id: number;
+  name: string;
+}
 
 interface User {
-  id: string;
-  name: string;
+  id: number;
+  username: string;
   email: string;
-  role: string;
-  status: 'active' | 'inactive';
-  lastLogin: string;
+  first_name: string;
+  last_name: string;
+  roles: Role[];
+  doctor_id: number | null;
 }
 
 const Users: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john@example.com',
-      role: 'Admin',
-      status: 'active',
-      lastLogin: '2024-03-15 10:30'
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      role: 'Doctor',
-      status: 'active',
-      lastLogin: '2024-03-15 09:45'
-    },
-    {
-      id: '3',
-      name: 'Mike Johnson',
-      email: 'mike@example.com',
-      role: 'Staff',
-      status: 'inactive',
-      lastLogin: '2024-03-14 15:20'
-    },
-    {
-      id: '4',
-      name: 'Sarah Wilson',
-      email: 'sarah@example.com',
-      role: 'Doctor',
-      status: 'active',
-      lastLogin: '2024-03-14 14:15'
-    },
-    {
-      id: '5',
-      name: 'Robert Brown',
-      email: 'robert@example.com',
-      role: 'Staff',
-      status: 'active',
-      lastLogin: '2024-03-14 11:30'
-    },
-    {
-      id: '6',
-      name: 'Emily Davis',
-      email: 'emily@example.com',
-      role: 'Doctor',
-      status: 'active',
-      lastLogin: '2024-03-14 10:45'
-    }
-  ]);
-
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<number | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error'; } | null>(null);
+  const [showAllPages, setShowAllPages] = useState(false);
   const itemsPerPage = 6;
 
-  const handleAddUser = (userData: any) => {
-    const newUser = {
-      id: String(users.length + 1),
-      ...userData,
-      lastLogin: new Date().toISOString()
-    };
-    setUsers([...users, newUser]);
-    setShowModal(false);
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get('/users/all');
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+      showNotification('Failed to fetch users', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleEditUser = (userData: any) => {
-    setUsers(users.map(user => 
-      user.id === editingUser?.id ? { ...user, ...userData } : user
-    ));
-    setShowModal(false);
-    setEditingUser(null);
-  };
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
@@ -94,16 +57,42 @@ const Users: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleDelete = (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(user => user.id !== userId));
+  const confirmDelete = (userId: number) => {
+    setUserToDelete(userId);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!userToDelete) return;
+
+    try {
+      await axiosInstance.delete(`/users/del/${userToDelete}`);
+      setUsers(users.filter(user => user.id !== userToDelete));
+      showNotification('User deleted successfully', 'success');
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      showNotification('Failed to delete user', 'error');
+    } finally {
+      setShowDeleteModal(false);
+      setUserToDelete(null);
     }
   };
 
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 6000);
+  };
+
+  const handleUserUpdate = () => {
+    fetchUsers();
+  };
+
   const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
+    user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.roles.some(role => role.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
@@ -112,8 +101,63 @@ const Users: React.FC = () => {
     currentPage * itemsPerPage
   );
 
+  const renderPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = showAllPages ? totalPages : 5;
+
+    for (let i = 1; i <= Math.min(maxVisiblePages, totalPages); i++) {
+      pageNumbers.push(
+        <button
+          key={i}
+          onClick={() => setCurrentPage(i)}
+          className={`px-3 py-1 rounded-lg text-sm ${
+            currentPage === i ? 'bg-blue-500 text-white' : 'border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    if (!showAllPages && totalPages > 5) {
+      pageNumbers.push(
+        <button
+          key="more"
+          onClick={() => setShowAllPages(true)}
+          className="px-3 py-1 rounded-lg border border-gray-300 text-sm"
+        >
+          ...
+        </button>
+      );
+    }
+
+    if (showAllPages && totalPages > 5) {
+      pageNumbers.push(
+        <button
+          key="less"
+          onClick={() => setShowAllPages(false)}
+          className="px-3 py-1 rounded-lg border border-gray-300 text-sm"
+        >
+          Show Less
+        </button>
+      );
+    }
+
+    return pageNumbers;
+  };
+
   return (
-    <div className="space-y-4 max-w-[1600px] mx-auto">
+    <div className="space-y-4 max-w-[1600px] mx-auto relative">
+      {/* Loading indicator */}
+      {loading && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          <div className="flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            <span className="text-sm">Loading users data...</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Users Management</h1>
         <button
@@ -146,11 +190,10 @@ const Users: React.FC = () => {
           <table className="min-w-full">
             <thead>
               <tr className="bg-gray-50">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -158,23 +201,22 @@ const Users: React.FC = () => {
               {paginatedUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                    <div className="text-sm font-medium text-gray-900">{user.username}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{`${user.first_name} ${user.last_name}`}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">{user.email}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{user.role}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.lastLogin}
+                    <div className="flex flex-wrap gap-1">
+                      {user.roles.map(role => (
+                        <span key={role.id} className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                          {role.name}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-3">
@@ -185,7 +227,7 @@ const Users: React.FC = () => {
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => confirmDelete(user.id)}
                         className="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded-lg"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -214,19 +256,7 @@ const Users: React.FC = () => {
             >
               Previous
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  currentPage === page
-                    ? 'bg-blue-500 text-white'
-                    : 'border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
+            {renderPageNumbers()}
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
@@ -238,16 +268,36 @@ const Users: React.FC = () => {
         </div>
       </div>
 
-      <UserModal
-        isOpen={showModal}
+    <UserModal
+  isOpen={showModal}
+  onClose={() => {
+    setShowModal(false);
+    setEditingUser(null);
+  }}
+  initialData={editingUser}
+  mode={modalMode}
+  showNotification={showNotification}
+  onUserUpdate={handleUserUpdate}
+/>
+
+
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
         onClose={() => {
-          setShowModal(false);
-          setEditingUser(null);
+          setShowDeleteModal(false);
+          setUserToDelete(null);
         }}
-        onSubmit={modalMode === 'add' ? handleAddUser : handleEditUser}
-        initialData={editingUser}
-        mode={modalMode}
+        onConfirm={handleDelete}
+        itemName="user"
       />
+
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
     </div>
   );
 };

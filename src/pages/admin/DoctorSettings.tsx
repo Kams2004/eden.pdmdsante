@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Eye, EyeOff, Pencil, Trash2, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Actuality {
@@ -12,61 +13,72 @@ interface Actuality {
 }
 
 const DoctorSettings: React.FC = () => {
-  const [actualities, setActualities] = useState<Actuality[]>([
-    {
-      id: 6,
-      title: "Grande compagne de prise en charge des lombalgies et des Cervicalgies",
-      date: "Du 12 au 18 Juin 2023",
-      description:
-        "Grande campagne de prise en charge des Lombalgies (mal de dos) des cervicalgies, des patients souffrants de hernie discale (sciatalgie-sciatique/cervicobrachialgie)…Avec une réduction de 30% sur les tarifs régulièrement appliqués.",
-      image:
-        "https://pdmdsante.com/wp-content/uploads/2023/06/349642424_949889916054279_1739287961669853403_n-763x675.jpg?w=500&auto=format",
-      link: "https://pdmdsante.com/grande-compagne-de-prise-en-charge-des-lombalgies-et-des-cervicalgies/",
-      visible: true,
-    },
-    // Add more demo actualities here for testing pagination
-    { id: 7,
-        title: "Grande compagne de prise en charge des lombalgies et des Cervicalgies",
-        date: "Du 12 au 18 Juin 2023",
-        description: "Grande campagne de prise en charge des Lombalgies (mal de dos) des cervicalgies, des patients souffrants de hernie discale (sciatalgie-sciatique/cervicobrachialgie)…Avec une réduction de 30% sur les tarifs régulièrement appliqués.",
-        image: "https://pdmdsante.com/wp-content/uploads/2023/06/349642424_949889916054279_1739287961669853403_n-763x675.jpg?w=500&auto=format",
-        link: "https://pdmdsante.com/grande-compagne-de-prise-en-charge-des-lombalgies-et-des-cervicalgies/",
-        visible:true
-      },
-    { id: 8,   
-        title: "Octobre rose 2023",
-        date: "Oct 2, 2023",
-        description: "Pediatric wing renovation completed with improved facilities.",
-        image: "https://pdmdsante.com/wp-content/uploads/2024/08/Octobre-rose-2023-version-francaise-1080x675.jpg?w=500&auto=format",
-        link: "https://pdmdsante.com/octobre-rose-2022/",
-         visible: true },
-    { id: 9, title: "Example Title 3", date: "2024-01-03", description: "Description 3", image: "", link: "", visible: true },
-    { id: 10, title: "Example Title 4", date: "2024-01-04", description: "Description 4", image: "", link: "", visible: true },
-    { id: 11, title: "Example Title 5", date: "2024-01-05", description: "Description 5", image: "", link: "", visible: true },
-    { id: 12, title: "Example Title 6", date: "2024-01-06", description: "Description 6", image: "", link: "", visible: true },
-    { id: 13, title: "Example Title 7", date: "2024-01-07", description: "Description 7", image: "", link: "", visible: true },
-  ]);
-
+  const [actualities, setActualities] = useState<Actuality[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingActuality, setEditingActuality] = useState<Actuality | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [actualityToDelete, setActualityToDelete] = useState<Actuality | null>(null);
 
   const itemsPerPage = 6; // Display 6 items per page
   const totalPages = Math.ceil(actualities.length / itemsPerPage);
 
-  const handleAddOrEdit = (actuality: Partial<Actuality>) => {
-    if (editingActuality) {
-      setActualities((prev) =>
-        prev.map((a) => (a.id === editingActuality.id ? { ...a, ...actuality } : a))
-      );
-    } else { 
-      setActualities((prev) => [
-        ...prev,
-        { ...actuality, id: prev.length + 1, visible: true } as Actuality,
-      ]);
+  useEffect(() => {
+    const fetchActualities = async () => {
+      try {
+        const response = await axios.get('http://65.21.73.170:7600/blog/');
+        const fetchedActualities = response.data.map((item: any) => ({
+          id: item.id,
+          title: item.titre,
+          date: item.date,
+          description: item.description,
+          image: item.image_url,
+          link: item.url,
+          visible: item.is_visible,
+        }));
+        setActualities(fetchedActualities);
+      } catch (error) {
+        console.error('Error fetching actualities:', error);
+      }
+    };
+
+    fetchActualities();
+  }, []);
+
+  const handleAddOrEdit = async (actuality: Partial<Actuality>) => {
+    const formData = new FormData();
+    formData.append('titre', actuality.title);
+    formData.append('description', actuality.description);
+    formData.append('date', actuality.date);
+    formData.append('url', actuality.link);
+    formData.append('is_visible', actuality.visible.toString());
+    formData.append('image', actuality.image);
+
+    try {
+      await axios.post('http://65.21.73.170:7600/blog/add', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Refresh actualities after adding/editing
+      const response = await axios.get('http://65.21.73.170:7600/blog/');
+      const fetchedActualities = response.data.map((item: any) => ({
+        id: item.id,
+        title: item.titre,
+        date: item.date,
+        description: item.description,
+        image: item.image_url,
+        link: item.url,
+        visible: item.is_visible,
+      }));
+      setActualities(fetchedActualities);
+
+      setShowModal(false);
+      setEditingActuality(null);
+    } catch (error) {
+      console.error('Error adding/editing actuality:', error);
     }
-    setShowModal(false);
-    setEditingActuality(null);
   };
 
   const handleToggleVisibility = (id: number) => {
@@ -75,9 +87,26 @@ const DoctorSettings: React.FC = () => {
     );
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this actuality?')) {
+  const handleDelete = async (id: number) => {
+    try {
+      await axios.delete(`http://65.21.73.170:7600/blog/del/${id}`);
       setActualities((prev) => prev.filter((a) => a.id !== id));
+      setDeleteModal(false);
+      setActualityToDelete(null);
+      // Refresh actualities after deletion
+      const response = await axios.get('http://65.21.73.170:7600/blog/');
+      const fetchedActualities = response.data.map((item: any) => ({
+        id: item.id,
+        title: item.titre,
+        date: item.date,
+        description: item.description,
+        image: item.image_url,
+        link: item.url,
+        visible: item.is_visible,
+      }));
+      setActualities(fetchedActualities);
+    } catch (error) {
+      console.error('Error deleting actuality:', error);
     }
   };
 
@@ -130,7 +159,10 @@ const DoctorSettings: React.FC = () => {
               </a>
               <div className="flex space-x-2">
                 <button
-                  onClick={() => setEditingActuality(actuality) || setShowModal(true)}
+                  onClick={() => {
+                    setEditingActuality(actuality);
+                    setShowModal(true);
+                  }}
                   className="text-indigo-600 hover:text-indigo-900"
                 >
                   <Pencil className="w-4 h-4" />
@@ -144,7 +176,10 @@ const DoctorSettings: React.FC = () => {
                   {actuality.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
                 <button
-                  onClick={() => handleDelete(actuality.id)}
+                  onClick={() => {
+                    setActualityToDelete(actuality);
+                    setDeleteModal(true);
+                  }}
                   className="text-red-600 hover:text-red-900"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -197,6 +232,7 @@ const DoctorSettings: React.FC = () => {
                   description: formData.get('description') as string,
                   image: formData.get('image') as string,
                   link: formData.get('link') as string,
+                  visible: editingActuality ? editingActuality.visible : true,
                 });
               }}
             >
@@ -254,6 +290,32 @@ const DoctorSettings: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for Deleting Actuality */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
+            <h2 className="text-xl font-bold mb-4">Delete Actuality</h2>
+            <p className="mb-4">Are you sure you want to delete this actuality?</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setDeleteModal(false)}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => actualityToDelete && handleDelete(actualityToDelete.id)}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

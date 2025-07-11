@@ -1,5 +1,7 @@
 import React from 'react';
 import { Bell, Globe, LogOut, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 interface HeaderProps {
   showLanguages: boolean;
@@ -7,13 +9,48 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ showLanguages, setShowLanguages }) => {
+  const navigate = useNavigate();
+  const BASE_URL = 'http://65.21.73.170:7600';
+
+  const handleLogout = async () => {
+    try {
+      // Get the auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+      
+      if (!authToken) {
+        navigate('/login');
+        return;
+      }
+
+      // Make logout request to the API
+      await axios.post(`${BASE_URL}/user/logout`, {}, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      // Clear user data from localStorage
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+
+      // Redirect to login page
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still clear local storage and redirect even if API call fails
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      navigate('/login');
+    }
+  };
+
   return (
     <header className="fixed top-4 left-4 right-4 bg-white shadow-md h-16 z-50 rounded-2xl">
       <div className="h-full flex items-center justify-between px-6">
         <img 
           src="/pdmd.png" 
           alt="Logo" 
-          className="h-14" // Adjust height as needed
+          className="h-14"
         />
         
         <div className="relative max-w-xl w-full mx-4">
@@ -46,7 +83,10 @@ const Header: React.FC<HeaderProps> = ({ showLanguages, setShowLanguages }) => {
             )}
           </div>
 
-          <button className="flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
             <LogOut className="w-5 h-5 mr-1" />
             <span>Logout</span>
           </button>

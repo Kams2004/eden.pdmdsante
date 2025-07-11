@@ -1,13 +1,10 @@
 import React from 'react';
 import { LayoutDashboard, Users, FileText, Settings, CreditCard } from 'lucide-react';
+import { getUserInitials, getUserFromStorage } from '../utils/userUtils';
 
 interface AccountantSidebarProps {
   isExpanded: boolean;
   setIsExpanded: (expanded: boolean) => void;
-  user: {
-    name: string;
-    initials: string;
-  };
   onMenuClick: (view: string) => void;
   currentView: string;
 }
@@ -23,10 +20,13 @@ const menuItems = [
 const AccountantSidebar: React.FC<AccountantSidebarProps> = ({
   isExpanded,
   setIsExpanded,
-  user,
   onMenuClick,
   currentView,
 }) => {
+  const userData = getUserFromStorage();
+  const initials = userData ? getUserInitials(userData.firstName, userData.lastName) : 'AC';
+  const displayName = userData?.firstName || 'Accountant';
+
   return (
     <aside
       className={`fixed top-24 left-4 bottom-4 bg-white rounded-2xl shadow-md transition-all duration-300 z-40 ${
@@ -40,12 +40,12 @@ const AccountantSidebar: React.FC<AccountantSidebarProps> = ({
           <div className={`bg-blue-100 text-blue-600 font-semibold rounded-full w-10 h-10 flex items-center justify-center ${
             isExpanded ? 'mx-auto mb-3' : ''
           }`}>
-            {user.initials}
+            {initials}
           </div>
           {isExpanded && (
             <div className="text-center">
               <p className="text-sm font-medium text-gray-700">Welcome,</p>
-              <p className="text-sm text-gray-600">{user.name}</p>
+              <p className="text-sm text-gray-600">{displayName}</p>
             </div>
           )}
         </div>

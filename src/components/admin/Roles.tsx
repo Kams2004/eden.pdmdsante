@@ -1,54 +1,398 @@
-import React, { useState } from 'react';
-import { Plus, Pencil, Trash2, Search, Shield } from 'lucide-react';
-import Toast from '../../components/UI/Toast';
-import ConfirmModal from '../../components/UI/ConfirmModal';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Search, Shield, Check, X } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-import Pagination from '../UI/Pagination';
+import axiosInstance from '../../api/axioConfig';
 
-// ... (keep existing interfaces and initial state)
+interface Role {
+  id: number;
+  name: string;
+  usersCount: number;
+  createdAt: string;
+}
+
+interface User {
+  id: number;
+  roles: {
+    id: number;
+    name: string;
+  }[];
+}
 
 const Roles: React.FC = () => {
-  // ... (keep existing state and functions)
-
-  // Add pagination state
+  const { t } = useLanguage();
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showAddInput, setShowAddInput] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<number | null>(null);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
-  // Calculate pagination
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const addRoleInputRef = useRef<HTMLDivElement>(null);
+  const addRoleButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [rolesResponse, usersResponse] = await Promise.all([
+          axiosInstance.get('/roles/'),
+          axiosInstance.get('/users/all')
+        ]);
+
+        const rolesData = rolesResponse.data;
+        const usersData = usersResponse.data;
+
+        const rolesWithCounts = rolesData.map((role: any) => ({
+          id: role.id,
+          name: role.name,
+          usersCount: usersData.filter((user: User) =>
+            user.roles.some(r => r.id === role.id)
+          ).length,
+          createdAt: new Date().toISOString().split('T')[0]
+        }));
+
+        setRoles(rolesWithCounts);
+        setError(null);
+      } catch (err) {
+        setError('Failed to fetch data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showAddInput &&
+          addRoleInputRef.current &&
+          !addRoleInputRef.current.contains(event.target as Node)) {
+        if (addRoleButtonRef.current &&
+            !addRoleButtonRef.current.contains(event.target as Node)) {
+          setShowAddInput(false);
+          setNewRoleName('');
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showAddInput]);
+
+  const handleAddRole = async () => {
+    if (!newRoleName.trim()) return;
+
+    try {
+      const response = await axiosInstance.post('/roles/add', {
+        name: newRoleName
+      });
+
+      const newRole = {
+        id: response.data.id,
+        name: newRoleName,
+        usersCount: 0,
+        createdAt: new Date().toISOString().split('T')[0]
+      };
+
+      setRoles([...roles, newRole]);
+      setNewRoleName('');
+      setShowAddInput(false);
+      showNotification('Role created successfully', 'success');
+    } catch (err) {
+      showNotification('Failed to create role', 'error');
+    }
+  };
+
+  const handleDeleteRole = async () => {
+    if (!roleToDelete) return;
+
+    try {
+      await axiosInstance.delete(`/roles/del/${roleToDelete}`);
+      setRoles(roles.filter(role => role.id !== roleToDelete));
+      setShowDeleteModal(false);
+      setRoleToDelete(null);
+      showNotification('Role deleted successfully', 'success');
+    } catch (err) {
+      showNotification('Failed to delete role', 'error');
+    }
+  };
+
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+  };
+
   const filteredRoles = roles.filter(role =>
-    role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    role.description.toLowerCase().includes(searchTerm.toLowerCase())
+    role.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  const currentRoles = filteredRoles.slice(indexOfFirstItem, indexOfLastItem);
+
   const totalPages = Math.ceil(filteredRoles.length / itemsPerPage);
+  const paginatedRoles = filteredRoles.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
-    <div className="space-y-4">
-      {/* ... (keep existing header) */}
-
-      <div className="bg-white rounded-xl shadow-md p-6">
-        {/* ... (keep existing search bar) */}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-          {currentRoles.map((role) => (
-            // ... (keep existing role card)
-          ))}
+    <div className="space-y-4 relative">
+      {/* Loading indicator */}
+      {loading && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          <div className="flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            <span className="text-sm">Loading roles data...</span>
+          </div>
         </div>
+      )}
 
-        <div className="mt-4">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemsPerPage={itemsPerPage}
-            totalItems={filteredRoles.length}
-          />
+      {/* Header - Always visible */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">{t('roles')}</h1>
+        <div className="relative">
+          <button
+            ref={addRoleButtonRef}
+            onClick={() => {
+              setShowAddInput(true);
+            }}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600"
+            disabled={loading}
+          >
+            <Plus className="w-4 h-4" />
+            {t('addNew')}
+          </button>
+          {showAddInput && (
+            <div
+              ref={addRoleInputRef}
+              className="absolute top-full mt-2 right-0 flex items-center bg-white rounded-lg shadow-lg border p-2 min-w-[300px]"
+            >
+              <input
+                type="text"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+                placeholder="Enter role name"
+                className="flex-1 px-3 py-2 border-none focus:outline-none"
+                autoFocus
+              />
+              {newRoleName && (
+                <button
+                  onClick={handleAddRole}
+                  className="ml-2 p-2 text-green-600 hover:bg-green-50 rounded-full"
+                >
+                  <Check className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ... (keep existing modals and toasts) */}
+      {/* Main Container - Always visible */}
+      <div className="bg-white rounded-xl shadow-md p-6 relative">
+        {/* Semi-transparent overlay during loading */}
+        {loading && (
+          <div className="absolute inset-0 bg-white bg-opacity-70 z-10 flex items-center justify-center rounded-xl">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          </div>
+        )}
+
+        {/* Search Bar - Always visible */}
+        <div className="flex justify-between items-center mb-6">
+          <div className="relative w-64">
+            <input
+              type="text"
+              placeholder={t('search')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
+            />
+            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          </div>
+        </div>
+
+        {/* Content Area */}
+        {error && (
+          <div className="text-center py-16">
+            <div className="text-red-500 text-lg mb-2">⚠️ Error Loading Data</div>
+            <div className="text-gray-600">{error}</div>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!error && roles.length === 0 && !loading && (
+          <div className="text-center py-16">
+            <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <div className="text-gray-600 text-lg mb-2">No roles found</div>
+            <div className="text-gray-500">Create your first role to get started</div>
+          </div>
+        )}
+
+        {!error && roles.length > 0 && (
+          <>
+            {filteredRoles.length === 0 ? (
+              <div className="text-center py-16">
+                <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <div className="text-gray-600 text-lg mb-2">No roles match your search</div>
+                <div className="text-gray-500">Try adjusting your search terms</div>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {paginatedRoles.map((role) => (
+                    <div key={role.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center">
+                          <Shield className="w-5 h-5 text-blue-500 mr-2" />
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-800">{role.name}</h3>
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <button
+                            className="text-red-600 hover:text-red-900"
+                            onClick={() => {
+                              setRoleToDelete(role.id);
+                              setShowDeleteModal(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+                        <span>{role.usersCount} users</span>
+                        <span>Created {role.createdAt}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6 px-4">
+                    <div className="flex items-center text-sm text-gray-500">
+                      Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredRoles.length)} of {filteredRoles.length} entries
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 rounded-lg border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-1 rounded-lg text-sm ${
+                            currentPage === page
+                              ? 'bg-blue-500 text-white'
+                              : 'border border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 rounded-lg border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-800">Delete Role</h2>
+              <button onClick={() => setShowDeleteModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <p className="mb-6">Are you sure you want to delete this role? This action cannot be undone.</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteRole}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification */}
+      {notification && (
+        <div className="fixed bottom-4 right-4 w-80 z-50">
+          <div className={`${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white rounded-lg shadow-lg overflow-hidden`}>
+            <div className="p-4">
+              <div className="flex justify-between items-center">
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{notification.message}</p>
+                </div>
+                <button onClick={() => setNotification(null)} className="text-white hover:text-gray-200">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="h-1 bg-black bg-opacity-20">
+              <div
+                className={`h-full ${notification.type === 'success' ? 'bg-green-300' : 'bg-red-300'}`}
+                style={{ animation: 'progress 6s linear forwards' }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes progress {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
     </div>
   );
 };

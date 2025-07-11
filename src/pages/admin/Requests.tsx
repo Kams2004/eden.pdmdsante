@@ -1,98 +1,99 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, MessageSquare, CheckCircle, XCircle, Clock } from 'lucide-react';
+import axiosInstance from '../../api/axioConfig'; // Import the configured axios instance
 
 interface Request {
-  id: string;
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  message: string;
+  administration: boolean;
+  commission: boolean;
+  connection: boolean;
+  revendication_examen: boolean;
+  suggestion: boolean;
+  error: boolean;
+  valide: boolean;
+  CreatedAt: string | null;
+  UpdateAt: string | null;
   type: string;
-  description: string;
-  doctor: string;
   status: 'pending' | 'resolved' | 'rejected';
   priority: 'low' | 'medium' | 'high';
-  createdAt: string;
-  updatedAt: string;
 }
 
 const Requests: React.FC = () => {
-  const [requests, setRequests] = useState<Request[]>([
-    {
-      id: '1',
-      type: 'System Access',
-      description: 'Request for additional system permissions',
-      doctor: 'Dr. John Smith',
-      status: 'pending',
-      priority: 'high',
-      createdAt: '2024-03-15 10:30',
-      updatedAt: '2024-03-15 10:30'
-    },
-    {
-      id: '2',
-      type: 'Equipment Access',
-      description: 'Request for MRI machine access',
-      doctor: 'Dr. Sarah Johnson',
-      status: 'pending',
-      priority: 'medium',
-      createdAt: '2024-03-14 15:45',
-      updatedAt: '2024-03-14 15:45'
-    },
-    {
-      id: '3',
-      type: 'Patient Transfer',
-      description: 'Request for patient transfer approval',
-      doctor: 'Dr. Michael Brown',
-      status: 'resolved',
-      priority: 'high',
-      createdAt: '2024-03-13 09:15',
-      updatedAt: '2024-03-13 14:30'
-    },
-    {
-      id: '4',
-      type: 'Schedule Change',
-      description: 'Request for emergency schedule adjustment',
-      doctor: 'Dr. Emily Davis',
-      status: 'pending',
-      priority: 'low',
-      createdAt: '2024-03-12 11:20',
-      updatedAt: '2024-03-12 11:20'
-    },
-    {
-      id: '5',
-      type: 'Software Access',
-      description: 'Request for specialized software access',
-      doctor: 'Dr. Robert Wilson',
-      status: 'rejected',
-      priority: 'medium',
-      createdAt: '2024-03-11 16:00',
-      updatedAt: '2024-03-11 17:30'
-    },
-    {
-      id: '6',
-      type: 'Department Transfer',
-      description: 'Request for department change approval',
-      doctor: 'Dr. Lisa Anderson',
-      status: 'pending',
-      priority: 'high',
-      createdAt: '2024-03-10 13:45',
-      updatedAt: '2024-03-10 13:45'
-    }
-  ]);
-
+  const [requests, setRequests] = useState<Request[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all'); // Add type filter
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  const handleApprove = (requestId: string) => {
-    setRequests(requests.map(request => 
-      request.id === requestId 
-        ? { ...request, status: 'resolved', updatedAt: new Date().toLocaleString() }
-        : request
-    ));
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        const response = await axiosInstance.get('/requete/');
+        const formattedRequests = response.data.map((req: any) => ({
+          ...req,
+          type: determineRequestType(req),
+          status: req.valide ? 'resolved' : 'pending',
+          priority: determinePriority(req),
+        }));
+        setRequests(formattedRequests);
+      } catch (error) {
+        console.error('Error fetching requests:', error);
+      }
+    };
+
+    fetchRequests();
+  }, []);
+
+  const determineRequestType = (req: Request) => {
+    if (req.connection) return 'Demande de Connexion';
+    if (req.commission) return 'Commission Mismatch';
+    if (req.revendication_examen) return 'Patient Record Issue';
+    if (req.suggestion) return 'Payment Delay';
+    if (req.error) return 'System Error';
+    if (req.administration) return 'Administrative Request';
+    return 'Unknown Request';
   };
 
-  const handleReject = (requestId: string) => {
-    setRequests(requests.map(request => 
-      request.id === requestId 
-        ? { ...request, status: 'rejected', updatedAt: new Date().toLocaleString() }
-        : request
-    ));
+  const determinePriority = (req: Request) => {
+    const type = determineRequestType(req);
+    switch (type) {
+      case 'System Error':
+        return 'high';
+      case 'Commission Mismatch':
+      case 'Patient Record Issue':
+        return 'medium';
+      default:
+        return 'low';
+    }
+  };
+
+  const handleApprove = async (requestId: number) => {
+    try {
+      const response = await axiosInstance.put(`/requete/validate/${requestId}`);
+      if (response.status === 200) {
+        setRequests(requests.map(request =>
+          request.id === requestId
+            ? { ...request, status: 'resolved', valide: true, UpdateAt: response.data.UpdateAt }
+            : request
+        ));
+      }
+    } catch (error) {
+      console.error('Error approving request:', error);
+    }
+  };
+
+  const handleReject = async (requestId: number) => {
+    try {
+      await axiosInstance.delete(`/requete/del/${requestId}`);
+      setRequests(requests.filter(request => request.id !== requestId));
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -106,14 +107,67 @@ const Requests: React.FC = () => {
     }
   };
 
+  // Get unique request types for the filter dropdown
+  const getUniqueRequestTypes = () => {
+    const types = requests.map(request => request.type);
+    return [...new Set(types)].sort();
+  };
+
   const filteredRequests = requests.filter(request => {
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
-    const matchesSearch = 
-      request.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesType = typeFilter === 'all' || request.type === typeFilter;
+    const matchesSearch =
+      request.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.description.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
+      request.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      `${request.first_name} ${request.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesStatus && matchesType && matchesSearch;
   });
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentRequests = filteredRequests.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+
+  const Pagination = ({ currentPage, totalPages, onPageChange }: { currentPage: number, totalPages: number, onPageChange: (page: number) => void }) => {
+    return (
+      <div className="flex justify-center mt-4">
+        <nav className="block">
+          <ul className="flex pl-0 rounded list-none flex-wrap">
+            <li>
+              <button
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`first:ml-0 text-xs font-semibold flex w-8 h-8 mx-1 p-0 rounded-full items-center justify-center leading-tight relative border border-solid border-blue-500 ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-blue-500 bg-white hover:bg-blue-50'}`}
+              >
+                <span className="text-lg">«</span>
+              </button>
+            </li>
+            {Array.from({ length: totalPages }, (_, index) => (
+              <li key={index}>
+                <button
+                  onClick={() => onPageChange(index + 1)}
+                  className={`first:ml-0 text-xs font-semibold flex w-8 h-8 mx-1 p-0 rounded-full items-center justify-center leading-tight relative border border-solid ${currentPage === index + 1 ? 'bg-blue-500 text-white' : 'bg-white text-blue-500 hover:bg-blue-50'}`}
+                >
+                  {index + 1}
+                </button>
+              </li>
+            ))}
+            <li>
+              <button
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`first:ml-0 text-xs font-semibold flex w-8 h-8 mx-1 p-0 rounded-full items-center justify-center leading-tight relative border border-solid border-blue-500 ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-blue-500 bg-white hover:bg-blue-50'}`}
+              >
+                <span className="text-lg">»</span>
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -130,6 +184,18 @@ const Requests: React.FC = () => {
             <option value="resolved">Resolved</option>
             <option value="rejected">Rejected</option>
           </select>
+          
+          {/* Add Type Filter */}
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Types</option>
+            {getUniqueRequestTypes().map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -145,60 +211,93 @@ const Requests: React.FC = () => {
             />
             <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+          
+          {/* Clear Filters Button */}
+          <button 
+            onClick={() => {
+              setStatusFilter('all');
+              setTypeFilter('all');
+              setSearchTerm('');
+              setCurrentPage(1);
+            }}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
             <Filter className="w-4 h-4" />
-            More Filters
+            Clear Filters
           </button>
         </div>
 
-        <div className="space-y-4">
-          {filteredRequests.map((request) => (
-            <div key={request.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-4">
-                  <MessageSquare className="w-5 h-5 text-blue-500 mt-1" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800">{request.type}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{request.description}</p>
-                    <p className="text-sm text-gray-500 mt-2">From: {request.doctor}</p>
+        {/* Results Summary */}
+        <div className="mb-4 text-sm text-gray-500">
+          Showing {currentRequests.length} of {filteredRequests.length} requests
+          {filteredRequests.length !== requests.length && ` (filtered from ${requests.length} total)`}
+        </div>
+
+        <div className="space-y-4 mb-4">
+          {currentRequests.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>No requests found matching your criteria.</p>
+            </div>
+          ) : (
+            currentRequests.map((request) => (
+              <div key={request.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4">
+                    <MessageSquare className="w-5 h-5 text-blue-500 mt-1" />
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800">{request.type}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{request.message}</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        From: {(request.commission || request.error || request.revendication_examen) ? `Dr. ${request.first_name} ${request.last_name}` : `${request.first_name} ${request.last_name}`}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">Email: {request.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    {getStatusIcon(request.status)}
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      request.priority === 'high' ? 'bg-red-100 text-red-800' :
+                      request.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {request.priority}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
-                  {getStatusIcon(request.status)}
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    request.priority === 'high' ? 'bg-red-100 text-red-800' :
-                    request.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {request.priority}
-                  </span>
+                <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+                  <span>Created: {request.CreatedAt || 'N/A'}</span>
+                  <span>Last Updated: {request.UpdateAt || 'N/A'}</span>
                 </div>
-              </div>
-              
-              <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-                <span>Created: {request.createdAt}</span>
-                <span>Last Updated: {request.updatedAt}</span>
-              </div>
 
-              {request.status === 'pending' && (
-                <div className="mt-4 flex justify-end space-x-2">
-                  <button 
-                    onClick={() => handleApprove(request.id)}
-                    className="px-4 py-2 text-sm text-white bg-green-500 rounded-lg hover:bg-green-600"
-                  >
-                    Approve
-                  </button>
-                  <button 
-                    onClick={() => handleReject(request.id)}
-                    className="px-4 py-2 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600"
-                  >
-                    Reject
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+                {request.status === 'pending' && (
+                  <div className="mt-4 flex justify-end space-x-2">
+                    <button
+                      onClick={() => handleApprove(request.id)}
+                      className="px-4 py-2 text-sm text-white bg-green-500 rounded-lg hover:bg-green-600"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleReject(request.id)}
+                      className="px-4 py-2 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
+
+        {totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
     </div>
   );

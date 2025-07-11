@@ -1,13 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, Users, Shield, User as UserMd, MessageSquare, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Shield, User as UserMd, MessageSquare, Settings, Calendar } from 'lucide-react';
+import { getUserInitials, getUserFromStorage } from '../utils/userUtils';
 
 interface AdminSidebarProps {
   isExpanded: boolean;
   setIsExpanded: (expanded: boolean) => void;
-  user: {
-    name: string;
-    initials: string;
-  };
   onMenuClick: (view: string) => void;
   currentView: string;
 }
@@ -18,16 +15,20 @@ const menuItems = [
   { icon: Shield, label: 'Roles', id: 'roles' },
   { icon: UserMd, label: 'Doctors', id: 'doctors' },
   { icon: Settings, label: 'Doctor Settings', id: 'doctor-settings' },
+  { icon: Calendar, label: 'Appointments', id: 'appointments' },
   { icon: MessageSquare, label: 'Requests', id: 'requests' },
 ];
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({
   isExpanded,
   setIsExpanded,
-  user,
   onMenuClick,
   currentView,
 }) => {
+  const userData = getUserFromStorage();
+  const initials = userData ? getUserInitials(userData.firstName, userData.lastName) : 'AD';
+  const displayName = userData?.firstName || 'Admin';
+
   return (
     <aside
       className={`fixed top-24 left-4 bottom-4 bg-white rounded-2xl shadow-md transition-all duration-300 z-40 ${
@@ -43,12 +44,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
               isExpanded ? 'mx-auto mb-3' : ''
             }`}
           >
-            {user.initials}
+            {initials}
           </div>
           {isExpanded && (
             <div className="text-center">
               <p className="text-sm font-medium text-gray-700">Welcome,</p>
-              <p className="text-sm text-gray-600">{user.name}</p>
+              <p className="text-sm text-gray-600">{displayName}</p>
             </div>
           )}
         </div>
@@ -66,7 +67,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
-              <item.icon className="w-6 h-6 text-current" /> {/* Ensure icons use current text color */}
+              <item.icon className="w-6 h-6 text-current" />
               <span className={`transition-all duration-300 ${isExpanded ? 'ml-3 block' : 'hidden'}`}>
                 {item.label}
               </span>

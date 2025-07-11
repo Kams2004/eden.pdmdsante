@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Newspaper } from 'lucide-react';
 
 interface Actuality {
@@ -7,26 +7,78 @@ interface Actuality {
   date: string;
   description: string;
   image: string;
-  link: string;
 }
 
 interface ActualitiesProps {
-  actualities: Actuality[];
+  actualities?: Actuality[];
 }
 
-const Actualities: React.FC<ActualitiesProps> = ({ actualities }) => {
-  const [isHovered, setIsHovered] = useState(false);
+const Actualities: React.FC<ActualitiesProps> = ({ actualities = [] }) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContentRef = useRef<HTMLDivElement>(null);
 
+  const scrollPositionRef = useRef(0);
+  const animationIdRef = useRef<number>();
+  const isHoveredRef = useRef(false);
+  
   useEffect(() => {
-    const scrollContainer = document.querySelector('.animate-scroll');
-    if (scrollContainer) {
-      if (isHovered) {
-        scrollContainer.style.animationPlayState = 'paused';
-      } else {
-        scrollContainer.style.animationPlayState = 'running';
+    const scrollContainer = scrollContainerRef.current;
+    const scrollContent = scrollContentRef.current;
+    
+    if (!scrollContainer || !scrollContent || !actualities || actualities.length === 0) return;
+
+    // Calculate the width of one complete set of actualities
+    const itemWidth = 256 + 16; // w-64 = 256px + gap of 16px
+    const totalWidth = itemWidth * actualities.length;
+    const scrollSpeed = 0.3; // Slower speed - pixels per frame
+    
+    const scroll = () => {
+      if (!isHoveredRef.current) {
+        scrollPositionRef.current += scrollSpeed;
+        
+        // Reset position when we've scrolled past one complete set
+        if (scrollPositionRef.current >= totalWidth) {
+          scrollPositionRef.current = 0;
+        }
+        
+        if (scrollContainer) {
+          scrollContainer.scrollLeft = scrollPositionRef.current;
+        }
       }
+      
+      animationIdRef.current = requestAnimationFrame(scroll);
+    };
+
+    // Mouse event handlers
+    const handleMouseEnter = () => {
+      isHoveredRef.current = true;
+    };
+
+    const handleMouseLeave = () => {
+      isHoveredRef.current = false;
+    };
+
+    // Add event listeners
+    scrollContainer.addEventListener('mouseenter', handleMouseEnter);
+    scrollContainer.addEventListener('mouseleave', handleMouseLeave);
+
+    // Start the animation only if not already running
+    if (!animationIdRef.current) {
+      animationIdRef.current = requestAnimationFrame(scroll);
     }
-  }, [isHovered]);
+
+    // Cleanup
+    return () => {
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+        animationIdRef.current = undefined;
+      }
+      scrollContainer.removeEventListener('mouseenter', handleMouseEnter);
+      scrollContainer.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, []); // Empty dependency array - runs only once on mount
+
+  if (!actualities || !actualities.length) return null;
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 mb-4">
@@ -34,23 +86,36 @@ const Actualities: React.FC<ActualitiesProps> = ({ actualities }) => {
         <h2 className="text-xl font-bold">Actualities</h2>
         <Newspaper className="w-5 h-5 text-blue-600" />
       </div>
-      <div className="relative overflow-hidden">
+      
+      <div 
+        ref={scrollContainerRef}
+        className="relative overflow-hidden"
+        style={{ 
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          WebkitScrollbar: { display: 'none' }
+        }}
+      >
         <div 
-          className="flex space-x-4 animate-scroll"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
+          ref={scrollContentRef}
+          className="flex space-x-4"
+          style={{
+            width: `${(256 + 16) * actualities.length * 3}px` // Triple width for seamless loop
+          }}
         >
-          {[...actualities, ...actualities].map((actuality, index) => (
-            <div 
-              key={`${actuality.id}-${index}`} 
+          {/* Render actualities 3 times for seamless loop */}
+          {[...actualities, ...actualities, ...actualities].map((actuality, index) => (
+            <div
+              key={`${actuality.id}-${index}`}
               className="flex-none w-64 group"
             >
               <div className="bg-white rounded-lg shadow-lg overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
                 <div className="h-32 overflow-hidden">
-                  <img 
-                    src={actuality.image} 
+                  <img
+                    src={actuality.image}
                     alt={actuality.title}
                     className="w-full h-full object-cover transform transition-transform duration-500 group-hover:scale-110"
+                    loading="lazy"
                   />
                 </div>
                 <div className="p-3 space-y-1">
@@ -58,16 +123,11 @@ const Actualities: React.FC<ActualitiesProps> = ({ actualities }) => {
                     {actuality.title}
                   </h3>
                   <p className="text-xs text-gray-500">{actuality.date}</p>
-                  <p className="text-gray-600 text-sm line-clamp-1">{actuality.description}</p>
+                  <p className="text-gray-600 text-sm line-clamp-2">{actuality.description}</p>
                   <div className="flex justify-end pt-1">
-                    <a
-                      href={actuality.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="view-button border border-blue-600 bg-white text-blue-600 px-3 py-1 rounded-md text-sm hover:bg-blue-50 transition-colors duration-300"
-                    >
+                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors duration-200">
                       View...
-                    </a>
+                    </button>
                   </div>
                 </div>
               </div>

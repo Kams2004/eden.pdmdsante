@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from '../components/Header/Header';
 import AdminSidebar from '../components/Sidebar/AdminSidebar';
 import Dashboard from './admin/Dashboard';
@@ -7,7 +7,10 @@ import Roles from './admin/Roles';
 import Doctors from './admin/Doctors';
 import DoctorSettings from './admin/DoctorSettings';
 import Requests from './admin/Requests';
-import backgroundImage from './61804.jpg'; // Replace with the correct path to your background image
+import backgroundImage from './61804.jpg';
+import AppointmentManagement from '../components/admin/AppointmentManagement';
+import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../api/axioConfig';
 
 const AdminDashboard: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -38,20 +41,21 @@ const AdminDashboard: React.FC = () => {
         return <Doctors />;
       case 'requests':
         return <Requests />;
-      case 'doctor-settings': // New case for Doctor Settings
+      case 'doctor-settings':
         return <DoctorSettings />;
+      case 'appointments':
+        return <AppointmentManagement />;
       default:
         return <Dashboard stats={stats} />;
     }
   };
-  
 
   return (
     <div
       className="min-h-screen bg-cover bg-center"
       style={{
-        backgroundColor: '#002b36', // Fallback background color
-        backgroundImage: `url(${backgroundImage})`, // Background image
+        backgroundColor: '#002b36',
+        backgroundImage: `url(${backgroundImage})`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
       }}
