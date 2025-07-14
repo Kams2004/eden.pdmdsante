@@ -23,7 +23,6 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
-  const [totalCommissions, setTotalCommissions] = useState<number>(0);
   const [selectAll, setSelectAll] = useState(false);
   const [loading, setLoading] = useState<boolean>(true);
   const itemsPerPage = 5;
@@ -32,7 +31,6 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
     const fetchPatientsData = async () => {
       try {
         setLoading(true);
-
         const userData = localStorage.getItem('userData');
         if (!userData) {
           console.error('No user data found in localStorage');
@@ -40,8 +38,7 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
         }
         const { doctor_id } = JSON.parse(userData);
         const response = await axiosInstance.get(`gnu_doctor/${doctor_id}/exams-patients`);
-        const { commission, data_patients } = response.data;
-        setTotalCommissions(commission);
+        const { data_patients } = response.data;
 
         const formattedPatients = data_patients.map((patientData: any, index: number) => {
           const patientName = Object.keys(patientData)[0];
@@ -124,6 +121,7 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
     }
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -176,6 +174,7 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
         </body>
       </html>
     `;
+
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.print();
@@ -185,6 +184,8 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  const totalCommissions = paginatedPatients.reduce((sum, patient) => sum + patient.commission, 0);
 
   return (
     <div className="w-full bg-white rounded-lg shadow-md p-6 relative">

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, AlertCircle, Clock, CheckCircle, XCircle, Filter, Search, MessageSquare } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import Pagination from '../UI/Pagination';
-import axiosInstance from '../../api/axioConfig'; // Adjust the import path as necessary
+import axiosInstance from '../../api/axioConfig';
 
 interface Request {
   id: string;
@@ -13,6 +13,25 @@ interface Request {
   customMessage?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface ApiRequest {
+  CreatedAt: string;
+  CreatedBy: number;
+  UpdatedAt: string | null;
+  UpdatedBy: number | null;
+  administration: boolean;
+  commission: boolean;
+  connection: boolean;
+  email: string;
+  error: boolean;
+  first_name: string;
+  id: number;
+  last_name: string;
+  message: string;
+  revendication_examen: boolean;
+  suggestion: boolean;
+  valide: boolean;
 }
 
 const predefinedRequests = [
@@ -39,59 +58,60 @@ const predefinedRequests = [
 ];
 
 const RequestsView: React.FC = () => {
-  const { showSuccessToast, ToastComponent } = useToast();
+  const { showSuccessToast, showErrorToast, ToastComponent } = useToast();
   const [selectedRequest, setSelectedRequest] = useState<string>('');
   const [customMessage, setCustomMessage] = useState<string>('');
   const [urgency, setUrgency] = useState<'low' | 'medium' | 'high'>('low');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false); // Loading state
   const itemsPerPage = 5;
+  const [sentRequests, setSentRequests] = useState<Request[]>([]);
 
-  // Demo sent requests
-  const [sentRequests, setSentRequests] = useState<Request[]>([
-    {
-      id: '1',
-      type: 'Commission Mismatch',
-      description: 'Discrepancy in March commission calculation',
-      urgency: 'high',
-      status: 'pending',
-      customMessage: 'Please review the commission calculation for patient ID: 12345',
-      createdAt: '2024-03-15 10:30',
-      updatedAt: '2024-03-15 10:30'
-    },
-    {
-      id: '2',
-      type: 'Patient Record Issue',
-      description: 'Missing patient history records',
-      urgency: 'medium',
-      status: 'approved',
-      customMessage: 'Unable to access patient records from last week',
-      createdAt: '2024-03-14 15:45',
-      updatedAt: '2024-03-14 16:30'
-    },
-    {
-      id: '3',
-      type: 'System Error',
-      description: 'Unable to access patient portal',
-      urgency: 'high',
-      status: 'rejected',
-      customMessage: 'Getting error code 404 when trying to access the portal',
-      createdAt: '2024-03-13 09:15',
-      updatedAt: '2024-03-13 10:00'
+  const fetchUserRequests = async () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const userId = userData.id;
+
+      if (userId) {
+        const response = await axiosInstance.get<ApiRequest[]>(`/requete/get_requests/${userId}`);
+        const requests = response.data.map((req: ApiRequest) => ({
+          id: String(req.id),
+          type: req.commission ? 'Commission Mismatch' :
+                req.revendication_examen ? 'Patient Record Issue' :
+                req.error ? 'System Error' : 'Payment Delay',
+          description: req.message,
+          urgency: 'low',
+          status: req.valide ? 'approved' : 'pending',
+          customMessage: req.message,
+          createdAt: req.CreatedAt,
+          updatedAt: req.UpdatedAt || req.CreatedAt
+        }));
+        setSentRequests(requests);
+      }
+    } catch (error) {
+      console.error('Error fetching user requests:', error);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchUserRequests();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRequest || !customMessage) return;
 
+    setLoading(true); // Set loading to true when starting the request
+
     const selectedPredefinedRequest = predefinedRequests.find(r => r.id === selectedRequest);
-    if (!selectedPredefinedRequest) return;
+    if (!selectedPredefinedRequest) {
+      setLoading(false);
+      return;
+    }
 
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-
-    // Extract only the required fields from userData
     const { email, first_name, last_name } = userData;
 
     const requestData = {
@@ -111,18 +131,8 @@ const RequestsView: React.FC = () => {
       const response = await axiosInstance.post('/requete/add', requestData);
       showSuccessToast('Request sent successfully');
 
-      const newRequest: Request = {
-        id: String(sentRequests.length + 1),
-        type: selectedPredefinedRequest.title,
-        description: selectedPredefinedRequest.description,
-        urgency,
-        status: 'pending',
-        customMessage,
-        createdAt: new Date().toLocaleString(),
-        updatedAt: new Date().toLocaleString()
-      };
-
-      setSentRequests([newRequest, ...sentRequests]);
+      // Refetch requests to update the list
+      await fetchUserRequests();
 
       // Reset form
       setSelectedRequest('');
@@ -130,10 +140,12 @@ const RequestsView: React.FC = () => {
       setUrgency('low');
     } catch (error) {
       console.error('Error sending request:', error);
+      showErrorToast('Failed to send request');
+    } finally {
+      setLoading(false); // Set loading to false when the request is completed
     }
   };
 
-  // Filter and pagination logic
   const filteredRequests = sentRequests.filter(request => {
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
     const matchesSearch =
@@ -176,7 +188,6 @@ const RequestsView: React.FC = () => {
               </div>
             ))}
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Urgency Level
@@ -198,7 +209,6 @@ const RequestsView: React.FC = () => {
               ))}
             </div>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Additional Details
@@ -211,15 +221,26 @@ const RequestsView: React.FC = () => {
               placeholder="Please provide any additional information about your request..."
             ></textarea>
           </div>
-
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={!selectedRequest || !customMessage}
+              disabled={!selectedRequest || !customMessage || loading}
               className="flex items-center px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Send className="w-4 h-4 mr-2" />
-              Send Request
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Request
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -252,7 +273,6 @@ const RequestsView: React.FC = () => {
             </select>
           </div>
         </div>
-
         <div className="space-y-4">
           {currentRequests.map((request) => (
             <div key={request.id} className="border rounded-lg p-4">
@@ -289,7 +309,6 @@ const RequestsView: React.FC = () => {
             </div>
           ))}
         </div>
-
         <div className="mt-4">
           <Pagination
             currentPage={currentPage}
@@ -300,7 +319,6 @@ const RequestsView: React.FC = () => {
           />
         </div>
       </div>
-
       {ToastComponent}
     </div>
   );

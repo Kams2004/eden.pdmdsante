@@ -45,20 +45,22 @@ const StatCards: React.FC<StatCardsProps> = ({ showAmount, setShowAmount }) => {
         const userDataString = localStorage.getItem('userData');
         const userData = userDataString ? JSON.parse(userDataString) : null;
         const doctorId = userData?.doctor_id || '65';
-
         const response = await axiosInstance.get(`gnu_doctor/${doctorId}/research/`);
         const data = response.data;
-
         const commissionAmount = data.Data.commission;
         const commissionCount = data.number;
 
         // Calculate unique patients
         const uniquePatients = new Set(data.Data.data_patients.map((patientData: { [key: string]: any }) => Object.keys(patientData)[0])).size;
-        const patientsPercentage = (uniquePatients / data.Data.data_patients.length) * 100;
+
+        // Define a maximum value for patients, this could be a realistic max value based on your context
+        const maxPatients = 100; // Example max value, adjust as needed
+        const patientsPercentage = (uniquePatients / maxPatients) * 100;
 
         // Mock data for examinations, since it's not provided in the new endpoint
         const mockExaminationsTotal = 5; // Example value, replace with actual logic if available
-        const mockExaminationsPercentage = 75; // Example value, replace with actual logic if available
+        const maxExaminations = 10; // Example max value, adjust as needed
+        const mockExaminationsPercentage = (mockExaminationsTotal / maxExaminations) * 100;
 
         setStats({
           commission: {
