@@ -25,60 +25,61 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const itemsPerPage = 5;
+  const [originalPatients, setOriginalPatients] = useState<Patient[]>([]);
+  const [isReset, setIsReset] = useState<boolean>(false);
+  const itemsPerPage = 6; // Set to 6 elements per page
 
-  useEffect(() => {
-    const fetchPatientsData = async () => {
-      try {
-        setLoading(true);
-        const userData = localStorage.getItem('userData');
-        if (!userData) {
-          console.error('No user data found in localStorage');
-          return;
-        }
-        const { doctor_id } = JSON.parse(userData);
-        const response = await axiosInstance.get(`gnu_doctor/${doctor_id}/exams-patients`);
-        const { data_patients } = response.data;
-
-        const formattedPatients = data_patients.map((patientData: any, index: number) => {
-          const patientName = Object.keys(patientData)[0];
-          const [examination, patientCommission, transferDate] = patientData[patientName];
-          return {
-            id: `P${index + 1}`,
-            name: patientName,
-            examination,
-            commission: parseFloat(patientCommission),
-            transferDate: new Date(transferDate),
-            selected: false,
-          };
-        });
-
-        setPatients(formattedPatients);
-        setFilteredPatients(formattedPatients);
-      } catch (error) {
-        console.error('Error fetching patients data:', error);
-      } finally {
-        setLoading(false);
+  const fetchPatientsData = async () => {
+    try {
+      setLoading(true);
+      const userData = localStorage.getItem('userData');
+      if (!userData) {
+        console.error('No user data found in localStorage');
+        return;
       }
-    };
-
-    fetchPatientsData();
-  }, []);
+      const { doctor_id } = JSON.parse(userData);
+      const response = await axiosInstance.get(`gnu_doctor/${doctor_id}/exams-patients`);
+      const { data_patients } = response.data;
+      const formattedPatients = data_patients.map((patientData: any, index: number) => {
+        const patientName = Object.keys(patientData)[0];
+        const [examination, patientCommission, transferDate] = patientData[patientName];
+        return {
+          id: `P${index + 1}`,
+          name: patientName,
+          examination,
+          commission: parseFloat(patientCommission),
+          transferDate: new Date(transferDate),
+          selected: isReset ? false : selectedPatients.includes(patientName),
+        };
+      });
+      setOriginalPatients(formattedPatients);
+      setPatients(formattedPatients);
+      setFilteredPatients(formattedPatients);
+    } catch (error) {
+      console.error('Error fetching patients data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let filtered = patients;
+    fetchPatientsData();
+  }, [selectedPatients, isReset]);
+
+  useEffect(() => {
+    let filtered = [...patients];
     if (startDate) {
-      filtered = filtered.filter(patient => patient.transferDate >= startDate);
+      filtered = filtered.filter(patient => patient.transferDate >= startDate!);
     }
     if (endDate) {
-      filtered = filtered.filter(patient => patient.transferDate <= endDate);
+      filtered = filtered.filter(patient => patient.transferDate <= endDate!);
     }
-    if (selectedPatients.length > 0) {
+    if (!isReset && selectedPatients.length > 0) {
       filtered = filtered.filter(patient => selectedPatients.includes(patient.name));
     }
     setFilteredPatients(filtered);
     setCurrentPage(1);
-  }, [startDate, endDate, patients, selectedPatients]);
+  }, [startDate, endDate, patients, isReset, selectedPatients]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", {
@@ -89,10 +90,7 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "XAF",
-    }).format(amount);
+    return amount.toFixed(2) + " FCFA";
   };
 
   const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
@@ -100,6 +98,11 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
   const handleReset = () => {
     setStartDate(null);
     setEndDate(null);
+    setIsReset(true);
+    setSelectAll(false);
+    const resetPatients = originalPatients.map(patient => ({ ...patient, selected: false }));
+    setPatients(resetPatients);
+    setFilteredPatients(resetPatients);
   };
 
   const handleSelectAll = () => {
@@ -121,7 +124,6 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
     }
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-
     const html = `
       <!DOCTYPE html>
       <html>
@@ -174,7 +176,6 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
         </body>
       </html>
     `;
-
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.print();
@@ -309,10 +310,10 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
                 </td>
               </tr>
             ) : (
-              paginatedPatients.map((patient) => (
+              paginatedPatients.map((patient, index) => (
                 <tr
                   key={patient.id}
-                  className="border-b border-gray-100 hover:bg-gray-50"
+                  className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-[#F7F8FA]' : 'bg-white'}`}
                 >
                   <td className="px-4 py-3">
                     <input

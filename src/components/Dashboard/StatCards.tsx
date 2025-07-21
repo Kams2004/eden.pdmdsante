@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, Eye, EyeOff, Users, ClipboardCheck } from 'lucide-react';
+import { Wallet, Eye, EyeOff, Users, User } from 'lucide-react';
 import CircularProgress from '../UI/CircularProgress';
 import axiosInstance from "../../api/axioConfig";
 
@@ -17,10 +17,7 @@ interface Stats {
     total: number;
     percentage: number;
   };
-  examinations: {
-    total: number;
-    percentage: number;
-  };
+  examinations: string[];
 }
 
 const StatCards: React.FC<StatCardsProps> = ({ showAmount, setShowAmount }) => {
@@ -33,10 +30,7 @@ const StatCards: React.FC<StatCardsProps> = ({ showAmount, setShowAmount }) => {
       total: 0,
       percentage: 0,
     },
-    examinations: {
-      total: 0,
-      percentage: 0,
-    },
+    examinations: [],
   });
 
   useEffect(() => {
@@ -47,34 +41,21 @@ const StatCards: React.FC<StatCardsProps> = ({ showAmount, setShowAmount }) => {
         const doctorId = userData?.doctor_id || '65';
         const response = await axiosInstance.get(`gnu_doctor/${doctorId}/research/`);
         const data = response.data;
-        const commissionAmount = data.Data.commission;
-        const commissionCount = data.number;
 
-        // Calculate unique patients
-        const uniquePatients = new Set(data.Data.data_patients.map((patientData: { [key: string]: any }) => Object.keys(patientData)[0])).size;
-
-        // Define a maximum value for patients, this could be a realistic max value based on your context
-        const maxPatients = 100; // Example max value, adjust as needed
-        const patientsPercentage = (uniquePatients / maxPatients) * 100;
-
-        // Mock data for examinations, since it's not provided in the new endpoint
-        const mockExaminationsTotal = 5; // Example value, replace with actual logic if available
-        const maxExaminations = 10; // Example max value, adjust as needed
-        const mockExaminationsPercentage = (mockExaminationsTotal / maxExaminations) * 100;
+        // Extract unique patient names
+        const uniquePatients = [...new Set(data.Data.data_patients.map((patientData: { [key: string]: any }) => Object.keys(patientData)[0]))];
+        const patientsPercentage = (uniquePatients.length / 100) * 100; // Assuming 100 as a hypothetical max for percentage calculation
 
         setStats({
           commission: {
-            amount: commissionAmount,
-            count: commissionCount,
+            amount: data.Data.commission,
+            count: data.number,
           },
           patients: {
-            total: uniquePatients,
+            total: uniquePatients.length,
             percentage: patientsPercentage,
           },
-          examinations: {
-            total: mockExaminationsTotal,
-            percentage: mockExaminationsPercentage,
-          },
+          examinations: uniquePatients.slice(0, 3), // Display first three unique patient names
         });
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -87,7 +68,9 @@ const StatCards: React.FC<StatCardsProps> = ({ showAmount, setShowAmount }) => {
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
-      currency: 'XAF'
+      currency: 'XAF',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -126,13 +109,15 @@ const StatCards: React.FC<StatCardsProps> = ({ showAmount, setShowAmount }) => {
         />
       </div>
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Examinations In Process</h3>
-        <CircularProgress
-          percentage={stats.examinations.percentage}
-          icon={ClipboardCheck}
-          value={stats.examinations.total}
-          label="Examinations"
-        />
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Patient Names</h3>
+        <div>
+          {stats.examinations.map((name, index) => (
+            <div key={index} className="flex items-center mb-2">
+              <User className="w-5 h-5 mr-2 text-gray-500" />
+              <span className="text-gray-700">{name}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

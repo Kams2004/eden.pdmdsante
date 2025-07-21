@@ -21,8 +21,8 @@ interface CommissionData {
 }
 
 const CommissionView: React.FC = () => {
-  const [startDate, setStartDate] = useState<Date | null>(new Date(new Date().getFullYear(), 0, 1));
-  const [endDate, setEndDate] = useState<Date | null>(new Date());
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [commissions, setCommissions] = useState<CommissionData[]>([]);
   const [filteredCommissions, setFilteredCommissions] = useState<CommissionData[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -30,73 +30,69 @@ const CommissionView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const itemsPerPage = 10;
 
-  const allCommissionItems = filteredCommissions.flatMap(commission =>
-    commission.commissionData.map(item => ({
-      ...item,
-      doctorName: commission.doctorName
-    }))
-  );
-
-  const paginatedItems = allCommissionItems.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  useEffect(() => {
-    const fetchCommissionsData = async () => {
-      try {
-        setLoading(true);
-        const userData = localStorage.getItem('userData');
-        if (!userData) {
-          console.error('No user data found in localStorage');
-          return;
-        }
-
-        const { doctor_id } = JSON.parse(userData);
-        const startDateStr = startDate ? formatDateToString(startDate) : '';
-        const endDateStr = endDate ? formatDateToString(endDate) : '';
-
-        if (startDateStr && endDateStr) {
-          const response = await axiosInstance.get(`gnu_doctor/${doctor_id}/commissions/${startDateStr}/${endDateStr}`);
-          const formattedCommissions = Object.entries(response.data).map(([doctorName, commissionData]) => ({
-            doctorName,
-            commissionData: (commissionData as Commission[]).map(item => ({
-              ...item,
-              selected: false,
-              Validé: item.Validé || false
-            }))
-          }));
-
-          setCommissions(formattedCommissions);
-          setFilteredCommissions(formattedCommissions);
-        }
-      } catch (error) {
-        console.error('Error fetching commissions data:', error);
-      } finally {
-        setLoading(false);
+  const fetchCommissionsData = async () => {
+    try {
+      setLoading(true);
+      const userData = localStorage.getItem('userData');
+      if (!userData) {
+        console.error('No user data found in localStorage');
+        return;
       }
-    };
-
-    fetchCommissionsData();
-  }, [startDate, endDate]);
-
-  const formatDateToString = (date: Date | null): string => {
-    if (!date) return '';
-
-    const pad = (num: number) => num.toString().padStart(2, '0');
-
-    const year = date.getFullYear();
-    const month = pad(date.getMonth() + 1);
-    const day = pad(date.getDate());
-
-    return `${year}-${month}-${day} 00:00:00.000`;
+      const { doctor_id } = JSON.parse(userData);
+      const response = await axiosInstance.get(`gnu_doctor/${doctor_id}/commissions/`);
+      const formattedCommissions = Object.entries(response.data).map(([doctorName, commissionData]) => ({
+        doctorName,
+        commissionData: (commissionData as Array<{
+          Date: string;
+          Examen: string;
+          Facturé: string;
+          Montant: string;
+          Patient: string;
+          Produit: string;
+          Validé: boolean | null;
+        }>).map(item => ({
+          ...item,
+          selected: false,
+          Validé: item.Validé || false
+        }))
+      }));
+      setCommissions(formattedCommissions);
+      setFilteredCommissions(formattedCommissions);
+    } catch (error) {
+      console.error('Error fetching commissions data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    fetchCommissionsData();
+  }, []);
+
+  useEffect(() => {
+    let filtered = [...commissions];
+    if (startDate) {
+      filtered = filtered.map(commission => ({
+        ...commission,
+        commissionData: commission.commissionData.filter(item => new Date(item.Date) >= startDate)
+      })).filter(commission => commission.commissionData.length > 0);
+    }
+    if (endDate) {
+      filtered = filtered.map(commission => ({
+        ...commission,
+        commissionData: commission.commissionData.filter(item => new Date(item.Date) <= endDate)
+      })).filter(commission => commission.commissionData.length > 0);
+    }
+    setFilteredCommissions(filtered);
+    setCurrentPage(1);
+  }, [startDate, endDate, commissions]);
+
   const handleSelectAll = () => {
-    setSelectAll(!selectAll);
+    const newSelectAll = !selectAll;
+    setSelectAll(newSelectAll);
     setFilteredCommissions(filteredCommissions.map(commission => ({
       ...commission,
-      commissionData: commission.commissionData.map(item => ({ ...item, selected: !selectAll }))
+      commissionData: commission.commissionData.map(item => ({ ...item, selected: newSelectAll }))
     })));
   };
 
@@ -116,15 +112,13 @@ const CommissionView: React.FC = () => {
     const selectedCommissions = filteredCommissions.flatMap(commission =>
       commission.commissionData.filter(item => item.selected)
     );
-
     if (selectedCommissions.length === 0) {
       alert("Please select at least one commission to print");
       return;
     }
-
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-
+    const totalAmount = selectedCommissions.reduce((sum, item) => sum + parseFloat(item.Montant), 0).toFixed(2);
     const html = `
       <!DOCTYPE html>
       <html>
@@ -138,6 +132,20 @@ const CommissionView: React.FC = () => {
             th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
             th { background-color: #f8fafc; }
             .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+            .total { margin-top: 20px; text-align: right; font-weight: bold; font-size: 18px; color: black; }
+            .status {
+              border: 0.4px solid #ccc;
+              border-radius: 10px;
+              padding: 5px 10px;
+              text-align: center;
+              color: white;
+            }
+            .invoiced {
+              background-color: #31B749;
+            }
+            .not-invoiced {
+              background-color: #F03940;
+            }
           </style>
         </head>
         <body>
@@ -149,10 +157,10 @@ const CommissionView: React.FC = () => {
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Examen</th>
+                <th>Examination</th>
                 <th>Patient</th>
-                <th>Montant</th>
-                <th>Validé</th>
+                <th>Amount</th>
+                <th>Facturé</th>
               </tr>
             </thead>
             <tbody>
@@ -161,34 +169,51 @@ const CommissionView: React.FC = () => {
                   <td>${item.Date}</td>
                   <td>${item.Examen}</td>
                   <td>${item.Patient}</td>
-                  <td>${item.Montant}</td>
-                  <td>${item.Validé ? 'Validated' : 'Not Validated'}</td>
+                  <td>${parseFloat(item.Montant).toFixed(2)}</td>
+                  <td class="status ${item.Facturé ? 'invoiced' : 'not-invoiced'}">
+                    ${item.Facturé ? 'Invoiced' : 'Not Invoiced'}
+                  </td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
+          <div class="total">
+            Total Amount: ${totalAmount}
+          </div>
           <div class="footer">
             <p>Generated by PDMD</p>
           </div>
         </body>
       </html>
     `;
-
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.print();
   };
 
   const handleReset = () => {
-    setStartDate(new Date(new Date().getFullYear(), 0, 1));
-    setEndDate(new Date());
+    setStartDate(null);
+    setEndDate(null);
+    fetchCommissionsData();
   };
 
+  const allCommissionItems = filteredCommissions.flatMap(commission =>
+    commission.commissionData.map(item => ({
+      ...item,
+      doctorName: commission.doctorName
+    }))
+  );
+
+  const paginatedItems = allCommissionItems.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const totalPages = Math.ceil(allCommissionItems.length / itemsPerPage);
+  const totalAmount = paginatedItems.reduce((sum, item) => sum + parseFloat(item.Montant), 0).toFixed(2);
 
   return (
     <div className="w-full bg-white rounded-lg shadow-md p-6 relative">
-      {/* Loading indicator */}
       {loading && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
           <div className="flex items-center">
@@ -197,12 +222,10 @@ const CommissionView: React.FC = () => {
           </div>
         </div>
       )}
-
       <div className="text-center mb-4">
         <h2 className="text-2xl font-bold text-gray-800">Commissions</h2>
         <div className="w-24 h-1 bg-blue-500 mx-auto mt-2 rounded-full"></div>
       </div>
-
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div className="flex flex-wrap gap-4">
           <div className="flex flex-col">
@@ -229,7 +252,6 @@ const CommissionView: React.FC = () => {
             />
           </div>
         </div>
-
         <div className="flex gap-2">
           <button
             className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -256,13 +278,11 @@ const CommissionView: React.FC = () => {
           </button>
         </div>
       </div>
-
       <div className="mb-4">
         <p className="text-sm text-gray-600">
           Showing {allCommissionItems.length} of {allCommissionItems.length} Commissions
         </p>
       </div>
-
       <div className="overflow-x-auto">
         <table className="w-full min-w-[800px]">
           <thead>
@@ -277,10 +297,10 @@ const CommissionView: React.FC = () => {
                 />
               </th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Date</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Examen</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Examination</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Patient</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Montant</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Validé</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Amount</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Facturé</th>
             </tr>
           </thead>
           <tbody>
@@ -300,27 +320,24 @@ const CommissionView: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={item.selected || false}
-                      onChange={() => {
-                        setFilteredCommissions(prev =>
-                          prev.map(commission => {
-                            const updatedCommissionData = commission.commissionData.map(cItem =>
-                              cItem.Date === item.Date && cItem.Examen === item.Examen
-                                ? { ...cItem, selected: !cItem.selected }
-                                : cItem
-                            );
-                            return { ...commission, commissionData: updatedCommissionData };
-                          })
-                        );
-                      }}
+                      onChange={() => handleSelectCommission(item.doctorName, index)}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">{item.Date}</td>
                   <td className="px-4 py-3 text-sm text-gray-800 font-medium">{item.Examen}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{item.Patient}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.Montant}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{parseFloat(item.Montant).toFixed(2)}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    {item.Validé ? 'Validated' : 'Not Validated'}
+                    <div
+                      className={`border-[0.4px] border-gray-300 rounded-[10px] p-[5px] text-center text-white ${
+                        item.Facturé ? 'bg-[#31B749]' : 'bg-[#F03940]'
+                      }`}
+                    >
+                      <span className="font-bold">
+                        {item.Facturé ? 'Invoiced' : 'Not Invoiced'}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -328,23 +345,25 @@ const CommissionView: React.FC = () => {
           </tbody>
         </table>
       </div>
-
       <div className="mt-6">
+        <div className="flex justify-end mb-2 mr-8">
+          <p className="text-lg font-bold text-black">
+            Total Amount: {totalAmount} FCFA
+          </p>
+        </div>
         <div className="flex items-center justify-center gap-2">
           <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
             disabled={currentPage === 1 || loading}
             className="p-2 border-2 border-black rounded-full text-black hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-
           <span className="px-4 py-2 rounded-lg bg-gray-100">
             Page {currentPage} of {totalPages}
           </span>
-
           <button
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages || loading}
             className="p-2 border-2 border-black rounded-full text-black hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           >
