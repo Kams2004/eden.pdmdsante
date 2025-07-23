@@ -87,7 +87,7 @@ const MobileTodayStats = () => {
         <div className="absolute bottom-1/4 right-1/4 w-6 h-6 bg-indigo-200 opacity-25 rounded-full"></div>
         
         <div className="flex items-center justify-between mb-2 relative z-10">
-          <span className="text-gray-700 font-bold">Patient Names</span>
+          <span className="text-gray-700 font-bold">Today's Patient Names</span>
         </div>
         <hr className="mb-4 border-blue-200 relative z-10" />
         <div className="text-sm text-gray-600 relative z-10">
