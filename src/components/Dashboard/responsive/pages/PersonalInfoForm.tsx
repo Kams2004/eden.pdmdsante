@@ -1,6 +1,6 @@
-// PersonalInfoForm.tsx
-'use client';
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Save, Loader2 } from 'lucide-react';
+import axiosInstance from '../../../../api/axioConfig';
 
 interface PersonalInfo {
   firstName: string;
@@ -20,15 +20,21 @@ interface DoctorInfo {
   doctorPhone2: string;
 }
 
-export default function PersonalInfoForm() {
+const PersonalInfoForm: React.FC = () => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   const [formData, setFormData] = useState<PersonalInfo>({
-    firstName: 'Dr. LECKPA',
-    lastName: 'HERMINE',
-    email: 'kamsu.perold@pdmdsante.com',
+    firstName: '',
+    lastName: '',
+    email: '',
     dateOfBirth: '',
-    placeOfBirth: 'Cameroun',
-    nationality: 'Cameroun',
-    cni: '1234'
+    placeOfBirth: '',
+    nationality: '',
+    cni: '',
   });
 
   const [doctorData, setDoctorData] = useState<DoctorInfo>({
@@ -36,22 +42,91 @@ export default function PersonalInfoForm() {
     speciality: '',
     doctorFederationID: '',
     doctorPhone: '',
-    doctorPhone2: ''
+    doctorPhone2: '',
   });
 
-  const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 2;
+
+  const getDoctorId = () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      return userData.doctor_id || userData.id || userData.user_id;
+    } catch (error) {
+      console.error('Error getting doctor ID:', error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const fetchDoctorInfo = async () => {
+      const doctorId = getDoctorId();
+      if (!doctorId) {
+        setError('Doctor ID not found');
+        setIsLoading(false);
+        return;
+      }
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await axiosInstance.get(`/doctors/informations/${doctorId}`);
+        const doctorData = response.data;
+
+        const formatDate = (dateString: string | null) => {
+          if (!dateString) return '';
+          const date = new Date(dateString);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
+        setFormData({
+          firstName: doctorData.DoctorName || '',
+          lastName: doctorData.DoctorLastname || '',
+          email: doctorData.DoctorEmail || '',
+          dateOfBirth: formatDate(doctorData.DoctorDOB),
+          placeOfBirth: doctorData.DoctorPOB || '',
+          nationality: doctorData.DoctorNat || '',
+          cni: doctorData.DoctorCNI || '',
+        });
+
+        setDoctorData({
+          doctorNO: doctorData.DoctorNO || '',
+          speciality: doctorData.Speciality || '',
+          doctorFederationID: doctorData.DoctorFederationID || '',
+          doctorPhone: doctorData.DoctorPhone || '',
+          doctorPhone2: doctorData.DoctorPhone2 || '',
+        });
+      } catch (error) {
+        console.error('Error fetching doctor information:', error);
+        setError('Failed to load doctor information');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDoctorInfo();
+  }, []);
+
+  useEffect(() => {
+    if (showSuccessModal) {
+      const timer = setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessModal]);
 
   const handleInputChange = (field: keyof PersonalInfo | keyof DoctorInfo, value: string, isDoctorInfo: boolean = false) => {
     if (isDoctorInfo) {
       setDoctorData(prev => ({
         ...prev,
-        [field]: value
+        [field]: value,
       }));
     } else {
       setFormData(prev => ({
         ...prev,
-        [field]: value
+        [field]: value,
       }));
     }
   };
@@ -68,13 +143,62 @@ export default function PersonalInfoForm() {
     }
   };
 
-  const handleSave = () => {
-    console.log('Form data saved:', { formData, doctorData });
-    // Add your save logic here
+  const handleSave = async () => {
+    const doctorId = getDoctorId();
+    if (!doctorId) {
+      setError('Doctor ID not found');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      const updateData = {
+        DoctorName: formData.firstName,
+        DoctorLastname: formData.lastName,
+        DoctorEmail: formData.email,
+        DoctorDOB: formData.dateOfBirth || null,
+        DoctorPOB: formData.placeOfBirth,
+        DoctorNat: formData.nationality,
+        DoctorCNI: formData.cni,
+        DoctorNO: doctorData.doctorNO,
+        Speciality: doctorData.speciality,
+        DoctorFederationID: doctorData.doctorFederationID,
+        DoctorPhone: doctorData.doctorPhone,
+        DoctorPhone2: doctorData.doctorPhone2,
+      };
+
+      await axiosInstance.put(`/doctors/update/${doctorId}`, updateData);
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Error updating doctor information:', error);
+      setError('Failed to update doctor information');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="w-full max-w-2xl">
+      {isLoading && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          <div className="flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            <span className="text-sm">Loading doctor information...</span>
+          </div>
+        </div>
+      )}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+      {showSuccessModal && (
+        <div className="fixed top-30 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded shadow-lg">
+          Doctor information updated successfully!
+        </div>
+      )}
       {/* Step Indicator */}
       <div className="flex justify-center mb-8">
         <div className="flex items-center space-x-4">
@@ -94,13 +218,11 @@ export default function PersonalInfoForm() {
           ))}
         </div>
       </div>
-
       {/* Form Card */}
       <div className="bg-white rounded-lg shadow-lg p-8">
         <h2 className="text-2xl font-semibold text-gray-900 mb-8">
           {currentStep === 1 ? 'Personal Information' : 'Doctor Information'}
         </h2>
-
         {currentStep === 1 ? (
           <div className="space-y-6">
             {/* First Name & Last Name */}
@@ -115,6 +237,7 @@ export default function PersonalInfoForm() {
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your first name"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -127,10 +250,10 @@ export default function PersonalInfoForm() {
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your last name"
+                  disabled={isLoading}
                 />
               </div>
             </div>
-
             {/* Email & Date of Birth */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -143,6 +266,7 @@ export default function PersonalInfoForm() {
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your email"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -155,10 +279,10 @@ export default function PersonalInfoForm() {
                   onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="mm/dd/yyyy"
+                  disabled={isLoading}
                 />
               </div>
             </div>
-
             {/* Place of Birth & Nationality */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -171,6 +295,7 @@ export default function PersonalInfoForm() {
                   onChange={(e) => handleInputChange('placeOfBirth', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your place of birth"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -183,10 +308,10 @@ export default function PersonalInfoForm() {
                   onChange={(e) => handleInputChange('nationality', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your nationality"
+                  disabled={isLoading}
                 />
               </div>
             </div>
-
             {/* CNI */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -198,6 +323,7 @@ export default function PersonalInfoForm() {
                 onChange={(e) => handleInputChange('cni', e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter your CNI number"
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -214,6 +340,7 @@ export default function PersonalInfoForm() {
                 onChange={(e) => handleInputChange('doctorNO', e.target.value, true)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter your doctor number"
+                disabled={isLoading}
               />
             </div>
             <div>
@@ -226,6 +353,7 @@ export default function PersonalInfoForm() {
                 onChange={(e) => handleInputChange('speciality', e.target.value, true)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter your speciality"
+                disabled={isLoading}
               />
             </div>
             <div>
@@ -238,6 +366,7 @@ export default function PersonalInfoForm() {
                 onChange={(e) => handleInputChange('doctorFederationID', e.target.value, true)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter your doctor federation ID"
+                disabled={isLoading}
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -251,6 +380,7 @@ export default function PersonalInfoForm() {
                   onChange={(e) => handleInputChange('doctorPhone', e.target.value, true)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your phone number"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -263,17 +393,17 @@ export default function PersonalInfoForm() {
                   onChange={(e) => handleInputChange('doctorPhone2', e.target.value, true)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your secondary phone number"
+                  disabled={isLoading}
                 />
               </div>
             </div>
           </div>
         )}
-
         {/* Navigation Buttons */}
         <div className="flex justify-between mt-8">
           <button
             onClick={handlePrevious}
-            disabled={currentStep === 1}
+            disabled={currentStep === 1 || isLoading}
             className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors !rounded-button"
           >
             Previous
@@ -281,6 +411,7 @@ export default function PersonalInfoForm() {
           {currentStep < totalSteps ? (
             <button
               onClick={handleNext}
+              disabled={isLoading}
               className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors !rounded-button"
             >
               Next
@@ -288,18 +419,30 @@ export default function PersonalInfoForm() {
           ) : (
             <button
               onClick={handleSave}
-              className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors !rounded-button"
+              disabled={isSaving || isLoading}
+              className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors !rounded-button flex items-center gap-2"
             >
-              Save
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Save
+                </>
+              )}
             </button>
           )}
         </div>
       </div>
-
       {/* Bottom Indicator */}
       <div className="flex justify-center mt-6">
         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
       </div>
     </div>
   );
-}
+};
+
+export default PersonalInfoForm;

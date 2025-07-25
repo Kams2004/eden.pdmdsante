@@ -1,21 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Filter, RefreshCw, Printer, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import axiosInstance from "../../../../api/axioConfig";
 
-const MobilePatientsContent = ({ selectedPatients = [] }) => {
+interface Patient {
+  id: string;
+  name: string;
+  examination: string;
+  commission: string;
+  transferDate: string;
+  selected: boolean;
+}
+
+interface MobilePatientsContentProps {
+  selectedPatients?: string[];
+}
+
+const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({ selectedPatients = [] }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectAll, setSelectAll] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const patientsPerPage = 6;
 
-  const defaultPatients = [
-    { id: 'P1', name: 'AHMADI ATEF AWAD', examination: 'CONSULTATION CARDIOLOGIQUE', commission: '9345.00 FCFA', transferDate: 'Feb 25, 2025', selected: false },
-    { id: 'P2', name: 'BIKIM BISSE PAUL EMMANUEL', examination: 'CONSULTATION NEUROLOGIQUE', commission: '9345.00 FCFA', transferDate: 'Feb 25, 2025', selected: false },
-    { id: 'P3', name: 'BIKIM BISSE PAUL EMMANUEL', examination: 'CONSULTATION NEUROLOGIQUE', commission: '9345.00 FCFA', transferDate: 'Feb 25, 2025', selected: false },
-    { id: 'P4', name: 'KAMELU MONIQUE', examination: 'HEMOGLOBINE GLYQUEE', commission: '1922.40 FCFA', transferDate: 'Feb 25, 2025', selected: false },
-    { id: 'P5', name: 'SALIHU ESUKUKU PETER', examination: 'EPREUVE D\'EFFORT', commission: '13320.00 FCFA', transferDate: 'Feb 25, 2025', selected: false },
-    { id: 'P6', name: 'SALIHU ESUKUKU PETER', examination: 'EPREUVE D\'EFFORT', commission: '20790.00 FCFA', transferDate: 'Feb 25, 2025', selected: false },
-  ];
+  const fetchPatientsData = async () => {
+    try {
+      const userData = localStorage.getItem('userData');
+      if (!userData) {
+        console.error('No user data found in localStorage');
+        return;
+      }
+      const { doctor_id } = JSON.parse(userData);
+      const response = await axiosInstance.get(`gnu_doctor/${doctor_id}/exams-patients`);
+      const { data_patients } = response.data;
+      const formattedPatients = data_patients.map((patientData: any, index: number) => {
+        const patientName = Object.keys(patientData)[0];
+        const [examination, patientCommission, transferDate] = patientData[patientName];
+        return {
+          id: `P${index + 1}`,
+          name: patientName,
+          examination,
+          commission: `${patientCommission} FCFA`,
+          transferDate,
+          selected: selectedPatients.includes(patientName),
+        };
+      });
+      setPatients(formattedPatients);
+    } catch (error) {
+      console.error('Error fetching patients data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const [patients, setPatients] = useState(selectedPatients.length > 0 ? selectedPatients.map(p => ({ ...p, selected: false })) : defaultPatients);
+  useEffect(() => {
+    fetchPatientsData();
+  }, []);
 
   const handleFilter = () => {
     console.log('Filter clicked with dates:', startDate, endDate);
@@ -24,11 +66,76 @@ const MobilePatientsContent = ({ selectedPatients = [] }) => {
   const handleReset = () => {
     setStartDate('');
     setEndDate('');
-    console.log('Reset clicked');
+    setSelectAll(false);
+    setPatients(patients.map(patient => ({ ...patient, selected: false })));
   };
 
   const handlePrint = () => {
-    console.log('Print clicked');
+    const selectedPatients = patients.filter(patient => patient.selected);
+    if (selectedPatients.length === 0) {
+      alert("Please select at least one patient to print");
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Patient Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .logo { font-size: 24px; font-weight: bold; color: #1a56db; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f8fafc; }
+            .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+            .total { margin-top: 20px; text-align: right; font-weight: bold; font-size: 18px; color: black; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">Medical Center</div>
+            <p>Patient Report - ${new Date().toLocaleDateString()}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Patient Name</th>
+                <th>Examination</th>
+                <th>Commission</th>
+                <th>Transfer Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${selectedPatients.map(patient => `
+                <tr>
+                  <td>${patient.id}</td>
+                  <td>${patient.name}</td>
+                  <td>${patient.examination}</td>
+                  <td>${patient.commission}</td>
+                  <td>${patient.transferDate}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="total">
+            Total Commission: ${selectedPatients.reduce((sum, patient) => {
+              const amount = parseFloat(patient.commission.replace(/[^\d.]/g, ''));
+              return sum + (isNaN(amount) ? 0 : amount);
+            }, 0).toFixed(2)} FCFA
+          </div>
+          <div class="footer">
+            <p>Generated by Medical Center Management System</p>
+          </div>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   const handleSelectAll = () => {
@@ -40,181 +147,248 @@ const MobilePatientsContent = ({ selectedPatients = [] }) => {
     setSelectAll(!selectAll);
   };
 
-  const handlePatientSelect = (id) => {
+  const handlePatientSelect = (id: string) => {
     const updatedPatients = patients.map(patient =>
       patient.id === id ? { ...patient, selected: !patient.selected } : patient
     );
     setPatients(updatedPatients);
   };
 
+  const indexOfLastPatient = currentPage * patientsPerPage;
+  const indexOfFirstPatient = indexOfLastPatient - patientsPerPage;
+  const currentPatients = patients.slice(indexOfFirstPatient, indexOfLastPatient);
+  const totalPages = Math.ceil(patients.length / patientsPerPage);
+
+  const goToNextPage = () => {
+    setCurrentPage(prevPage => Math.min(prevPage + 1, totalPages));
+  };
+
+  const goToPreviousPage = () => {
+    setCurrentPage(prevPage => Math.max(prevPage - 1, 1));
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">
+          <h1 className="text-xl font-semibold text-slate-800">Registered Patients</h1>
+          <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
+          <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
+        </div>
+        
+        {/* Loading for filter section */}
+        <div className="px-4 sm:px-6 py-4 bg-slate-50/50 border-b border-slate-200">
+          <div className="space-y-4 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-4 w-32 bg-slate-200 rounded animate-pulse"></div>
+              <div className="h-10 w-10 bg-slate-200 rounded-lg animate-pulse"></div>
+            </div>
+            
+            <div className="flex flex-row space-x-2 w-full">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex-1 p-2 bg-slate-200 rounded-lg flex items-center justify-center">
+                  <div className="flex space-x-1">
+                    {[1, 2, 3].map((j) => (
+                      <div 
+                        key={j}
+                        className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
+                        style={{ animationDelay: `${j * 0.1}s` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="h-4 w-48 bg-slate-200 rounded animate-pulse"></div>
+        </div>
+
+        {/* Loading for patient cards */}
+        <div className="px-4 py-2">
+          <div className="flex items-center mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="h-4 w-4 bg-slate-200 rounded mr-3"></div>
+            <div className="h-4 w-32 bg-slate-200 rounded"></div>
+          </div>
+          
+          <div className="space-y-3">
+            {[...Array(3)].map((_, index) => (
+              <div key={index} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-4 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
+                <div className="absolute bottom-0 left-0 w-12 h-12 bg-blue-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
+                
+                <div className="flex items-start justify-between mb-3 relative z-10">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-4 w-4 bg-slate-200 rounded"></div>
+                    <div className="h-6 w-24 bg-slate-200 rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="mb-3 relative z-10">
+                  <div className="h-6 w-3/4 bg-slate-200 rounded mb-2"></div>
+                  <div className="h-10 w-full bg-slate-200 rounded-lg"></div>
+                </div>
+                
+                <div className="flex justify-end items-center pt-3 border-t border-blue-200 relative z-10">
+                  <div className="h-6 w-20 bg-slate-200 rounded-full"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Loading for pagination */}
+        <div className="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50">
+          <div className="flex items-center justify-between">
+            <div className="h-8 w-24 bg-slate-200 rounded-lg"></div>
+            <div className="h-4 w-24 bg-slate-200 rounded"></div>
+            <div className="h-8 w-24 bg-slate-200 rounded-lg"></div>
+          </div>
+        </div>
+
+        {/* Loading for total commission */}
+        <div className="px-4 sm:px-6 py-4 border-t-2 border-blue-200 bg-blue-50 sticky bottom-0">
+          <div className="h-6 w-48 bg-slate-200 rounded mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-gray-200 px-4 sm:px-6 py-4">
-        <h1 className="text-xl font-semibold text-gray-900">Registered Patients</h1>
-        <div className="w-12 h-1 bg-blue-500 mt-2"></div>
+      <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">
+        <h1 className="text-xl font-semibold text-slate-800">Registered Patients</h1>
+        <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
+        <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
       </div>
-
-      {/* Filters - Mobile Optimized */}
-      <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+      <div className="px-4 sm:px-6 py-4 bg-slate-50/50 border-b border-slate-200">
         <div className="space-y-4 mb-4">
-          {/* Date inputs in a single column on mobile for better space management */}
-          <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4">
-            <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date
-              </label>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-slate-700">Filter by Date Range</h3>
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="p-4 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
+            >
+              <Calendar className="w-4 h-4" />
+            </button>
+          </div>
+          {showDatePicker && (
+            <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4 p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
               <div className="relative">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Start Date
+                </label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                    /* Mobile date picker optimization */
-                    appearance-none
-                    /* Ensure the picker stays within viewport */
-                    [&::-webkit-calendar-picker-indicator]:absolute
-                    [&::-webkit-calendar-picker-indicator]:right-2
-                    [&::-webkit-calendar-picker-indicator]:top-1/2
-                    [&::-webkit-calendar-picker-indicator]:-translate-y-1/2
-                    [&::-webkit-calendar-picker-indicator]:cursor-pointer
-                    [&::-webkit-calendar-picker-indicator]:opacity-70
-                    [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
-                  style={{
-                    /* Additional styles to ensure mobile compatibility */
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'textfield',
-                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white hover:border-slate-400 transition-colors"
                 />
-                <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
-            </div>
-            <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Date
-              </label>
               <div className="relative">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  End Date
+                </label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                    /* Mobile date picker optimization */
-                    appearance-none
-                    /* Ensure the picker stays within viewport */
-                    [&::-webkit-calendar-picker-indicator]:absolute
-                    [&::-webkit-calendar-picker-indicator]:right-2
-                    [&::-webkit-calendar-picker-indicator]:top-1/2
-                    [&::-webkit-calendar-picker-indicator]:-translate-y-1/2
-                    [&::-webkit-calendar-picker-indicator]:cursor-pointer
-                    [&::-webkit-calendar-picker-indicator]:opacity-70
-                    [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
-                  style={{
-                    /* Additional styles to ensure mobile compatibility */
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'textfield',
-                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white hover:border-slate-400 transition-colors"
                 />
-                <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-          </div>
-          
-          {/* Action Buttons - Stack on mobile */}
-          <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+          )}
+          <div className="flex flex-row space-x-2 w-full">
             <button
               onClick={handleFilter}
-              className="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 flex items-center justify-center space-x-2 transition-colors"
+              className="flex-1 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center justify-center transition-colors shadow-sm"
             >
               <Filter className="w-4 h-4" />
-              <span>Filter</span>
             </button>
             <button
               onClick={handleReset}
-              className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 flex items-center justify-center space-x-2 transition-colors"
+              className="flex-1 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center justify-center transition-colors shadow-sm"
             >
               <RefreshCw className="w-4 h-4" />
-              <span>Reset</span>
             </button>
             <button
               onClick={handlePrint}
-              className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 flex items-center justify-center space-x-2 transition-colors"
+              className="flex-1 p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center justify-center transition-colors shadow-sm"
             >
               <Printer className="w-4 h-4" />
-              <span>Print</span>
             </button>
           </div>
         </div>
-        <p className="text-sm text-gray-600">Showing 1 to {patients.length} of {patients.length} patients</p>
+        <p className="text-sm text-slate-600">Showing {indexOfFirstPatient + 1} to {Math.min(indexOfLastPatient, patients.length)} of {patients.length} patients</p>
       </div>
-
-      {/* Mobile Card View */}
       <div className="px-4 py-2">
-        <div className="flex items-center mb-4 p-2 bg-gray-50 rounded-lg">
+        <div className="flex items-center mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
           <input
             type="checkbox"
             checked={selectAll}
             onChange={handleSelectAll}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded mr-2 focus:ring-2 focus:ring-blue-500"
+            className="w-4 h-4 text-blue-500 border-slate-300 rounded mr-3 focus:ring-2 focus:ring-blue-400"
           />
-          <span className="text-sm font-medium text-gray-900">Select All ({patients.filter(p => p.selected).length} selected)</span>
+          <span className="text-sm font-medium text-slate-700">Select All ({patients.filter(p => p.selected).length} selected)</span>
         </div>
-        
         <div className="space-y-3">
-          {patients.map((patient, index) => (
-            <div key={patient.id || index} className="bg-gray border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-3">
+          {currentPatients.map((patient, index) => (
+            <div key={patient.id || index} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
+              <div className="absolute bottom-0 left-0 w-12 h-12 bg-blue-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
+              <div className="flex items-start justify-between mb-3 relative z-10">
                 <div className="flex items-center space-x-3">
                   <input
                     type="checkbox"
                     checked={patient.selected}
                     onChange={() => handlePatientSelect(patient.id)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    className="w-4 h-4 text-blue-500 border-slate-300 rounded focus:ring-2 focus:ring-blue-400"
                   />
-                  <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">{patient.id}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs text-gray-500 flex items-center">
-                    <Calendar className="w-3 h-3 mr-1" />
+                  <span className="text-xs font-medium flex items-center text-black bg-white px-2 py-1 rounded-full">
+                    <Calendar className="w-3 h-3 mr-1 text-black" />
                     {patient.transferDate}
                   </span>
                 </div>
               </div>
-              
-              <div className="mb-3">
-                <h3 className="text-sm font-semibold text-gray-900 mb-1">{patient.name}</h3>
-                <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded">{patient.examination}</p>
+              <div className="mb-3 relative z-10">
+                <h1 className="text-base font-bold mb-2 text-blue-800">{patient.name}</h1>
+                <p className="text-xs font-medium text-gray-600 bg-white p-2 rounded-lg border border-blue-200">
+                  {patient.examination}
+                </p>
               </div>
-              
-              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                <span className="text-xs text-gray-500 font-medium">Commission</span>
-                <span className="text-sm font-bold text-green-600">{patient.commission}</span>
+              <div className="flex justify-end items-center pt-3 border-t border-blue-200 relative z-10">
+                <span className="text-sm font-bold text-white bg-green-500 px-3 py-1 rounded-full">{patient.commission}</span>
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Pagination */}
-      <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50">
+      <div className="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50">
         <div className="flex items-center justify-between">
-          <button className="flex items-center px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+          <button
+            onClick={goToPreviousPage}
+            disabled={currentPage === 1}
+            className="flex items-center px-3 py-2 text-sm text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <ChevronLeft className="w-4 h-4 mr-1" />
             <span>Previous</span>
           </button>
-          <span className="text-sm text-gray-700 font-medium">Page 1 of 1</span>
-          <button className="flex items-center px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+          <span className="text-sm text-black font-bold">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={goToNextPage}
+            disabled={currentPage === totalPages}
+            className="flex items-center px-3 py-2 text-sm text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <span>Next</span>
             <ChevronRight className="w-4 h-4 ml-1" />
           </button>
         </div>
       </div>
-
-      {/* Total Commission - Sticky on mobile */}
       <div className="px-4 sm:px-6 py-4 border-t-2 border-blue-200 bg-blue-50 sticky bottom-0">
         <div className="text-center sm:text-right">
-          <span className="text-lg sm:text-xl font-bold text-gray-900">
-            Total Commission: <span className="text-blue-600">
+          <span className="text-lg sm:text-xl font-semibold text-slate-800">
+            Total Commission: <span className="text-blue-600 font-bold">
               {patients.reduce((sum, patient) => {
                 const amount = parseFloat(patient.commission.replace(/[^\d.]/g, ''));
                 return sum + (isNaN(amount) ? 0 : amount);

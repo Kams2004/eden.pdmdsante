@@ -1,19 +1,50 @@
 import React, { useState } from 'react';
 import { Bell, Globe, LogOut, Menu, LayoutDashboard, User, FileText, DollarSign, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
-const DashboardHeader = ({ onMenuClick, currentView }) => {
+// Define the type for the possible views
+type ViewType = 'dashboard' | 'patients' | 'request' | 'commissions' | 'settings' | 'toggleSidebar';
+
+interface DashboardHeaderProps {
+  onMenuClick: (view: ViewType) => void;
+  currentView: ViewType;
+}
+
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick, currentView }) => {
   const [showLanguages, setShowLanguages] = useState(false);
+  const navigate = useNavigate();
+  const BASE_URL = 'http://65.21.73.170:7600';
 
   const menuItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
-    { name: 'Patient', icon: User, key: 'patients' },
-    { name: 'Request', icon: FileText, key: 'request' },
-    { name: 'Commissions', icon: DollarSign, key: 'commissions' },
-    { name: 'Settings', icon: Settings, key: 'settings' }
+    { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' as ViewType },
+    { name: 'Patient', icon: User, key: 'patients' as ViewType },
+    { name: 'Request', icon: FileText, key: 'request' as ViewType },
+    { name: 'Commissions', icon: DollarSign, key: 'commissions' as ViewType },
+    { name: 'Settings', icon: Settings, key: 'settings' as ViewType }
   ];
 
-  const handleLogout = () => {
-    console.log('Logout clicked');
+  const handleLogout = async () => {
+    try {
+      const authToken = localStorage.getItem('authToken');
+      if (!authToken) {
+        navigate('/login');
+        return;
+      }
+      await axios.post(`${BASE_URL}/user/logout`, {}, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      navigate('/login');
+    }
   };
 
   const getCurrentPageTitle = () => {
@@ -30,7 +61,6 @@ const DashboardHeader = ({ onMenuClick, currentView }) => {
         <img src="/pdmd.png" alt="Logo" className="h-10" />
         <div className="flex flex-col">
           <span className="text-gray-600 text-sm">LH</span>
-          {/* <span className="text-xs text-blue-600 font-medium">{getCurrentPageTitle()}</span> */}
         </div>
       </div>
       <div className="flex items-center space-x-3">

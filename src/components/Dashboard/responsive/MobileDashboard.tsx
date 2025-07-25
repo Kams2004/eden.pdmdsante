@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+
 import DashboardHeader from './MobileHeader';
 import MobileGeneralInfo from './MobileGeneralInfo';
 import MobilePatientsList from './MobilePatientsList';
@@ -7,19 +8,32 @@ import MobileTodayStats from './MobileTodayStats';
 import MobilePatientsContent from './pages/MobilePatientsPage';
 import MobileCommission from './pages/MobileCommissionContent';
 import MobileRequestsContent from './pages/MobileRequestsContent';
-import MobileSidebar from './MobileSidebar'; // Import the MobileSidebar component
-import PersonalInfoForm from './pages/PersonalInfoForm'; // Import the PersonalInfoForm component
+import MobileSidebar from './MobileSidebar';
+import PersonalInfoForm from './pages/PersonalInfoForm';
+
+// Define a type for the possible views
+type ViewType = 'dashboard' | 'patients' | 'request' | 'commissions' | 'settings' | 'toggleSidebar';
 
 const MobileDoctorDashboard = () => {
-  const [currentView, setCurrentView] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<ViewType>('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [selectedPatients, setSelectedPatients] = useState<string[]>([]);
 
-  const handleMenuClick = (view) => {
+  const handleMenuClick = (view: ViewType) => {
     if (view === 'toggleSidebar') {
       setSidebarOpen(!sidebarOpen);
     } else {
       setCurrentView(view);
+      // Clear selected patients when navigating away from patients view
+      if (view !== 'patients') {
+        setSelectedPatients([]);
+      }
     }
+  };
+
+  const handleDetailsClick = (patients: string[]) => {
+    setSelectedPatients(patients);
+    setCurrentView('patients');
   };
 
   return (
@@ -43,10 +57,12 @@ const MobileDoctorDashboard = () => {
               <MobileStatsCards />
               <MobileTodayStats />
               <MobileGeneralInfo />
-              <MobilePatientsList />
+              <MobilePatientsList onDetailsClick={handleDetailsClick} />
             </>
           )}
-          {currentView === 'patients' && <MobilePatientsContent />}
+          {currentView === 'patients' && (
+            <MobilePatientsContent selectedPatients={selectedPatients} />
+          )}
           {currentView === 'request' && <MobileRequestsContent />}
           {currentView === 'commissions' && <MobileCommission />}
           {currentView === 'settings' && <PersonalInfoForm />}

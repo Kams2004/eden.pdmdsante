@@ -58,56 +58,54 @@ const SettingsView: React.FC = () => {
     }
   };
 
-useEffect(() => {
-  const fetchDoctorInfo = async () => {
-    const doctorId = getDoctorId();
-    if (!doctorId) {
-      setError('Doctor ID not found');
-      setIsLoading(false);
-      return;
-    }
+  useEffect(() => {
+    const fetchDoctorInfo = async () => {
+      const doctorId = getDoctorId();
+      if (!doctorId) {
+        setError('Doctor ID not found');
+        setIsLoading(false);
+        return;
+      }
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await axiosInstance.get<DoctorData>(`/doctors/informations/${doctorId}`);
+        const doctorData: DoctorData = response.data;
 
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await axiosInstance.get(`/doctors/informations/${doctorId}`);
-      const doctorData: DoctorData = response.data;
+        // Function to format date as YYYY-MM-DD
+        const formatDate = (dateString: string | null): string => {
+          if (!dateString) return "";
+          const date = new Date(dateString);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
 
-      // Function to format date as YYYY-MM-DD
-      const formatDate = (dateString) => {
-        if (!dateString) return "";
-        const date = new Date(dateString);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
+        setFormData({
+          doctorName: doctorData.DoctorName || "",
+          doctorLastname: doctorData.DoctorLastname || "",
+          doctorEmail: doctorData.DoctorEmail || "",
+          doctorDOB: formatDate(doctorData.DoctorDOB),
+          doctorPOB: doctorData.DoctorPOB || "",
+          doctorNat: doctorData.DoctorNat || "",
+          doctorCNI: doctorData.DoctorCNI || "",
+          doctorNO: doctorData.DoctorNO || "",
+          speciality: doctorData.Speciality || "",
+          doctorFederationID: doctorData.DoctorFederationID || "",
+          doctorPhone: doctorData.DoctorPhone || "",
+          doctorPhone2: doctorData.DoctorPhone2 || "",
+        });
+      } catch (error) {
+        console.error('Error fetching doctor information:', error);
+        setError('Failed to load doctor information');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-      setFormData({
-        doctorName: doctorData.DoctorName || "",
-        doctorLastname: doctorData.DoctorLastname || "",
-        doctorEmail: doctorData.DoctorEmail || "",
-        doctorDOB: formatDate(doctorData.DoctorDOB),
-        doctorPOB: doctorData.DoctorPOB || "",
-        doctorNat: doctorData.DoctorNat || "",
-        doctorCNI: doctorData.DoctorCNI || "",
-        doctorNO: doctorData.DoctorNO || "",
-        speciality: doctorData.Speciality || "",
-        doctorFederationID: doctorData.DoctorFederationID || "",
-        doctorPhone: doctorData.DoctorPhone || "",
-        doctorPhone2: doctorData.DoctorPhone2 || "",
-      });
-    } catch (error) {
-      console.error('Error fetching doctor information:', error);
-      setError('Failed to load doctor information');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  fetchDoctorInfo();
-}, []);
-
+    fetchDoctorInfo();
+  }, []);
 
   useEffect(() => {
     if (showSuccessModal) {
@@ -140,11 +138,9 @@ useEffect(() => {
       setError('Doctor ID not found');
       return;
     }
-
     try {
       setIsSaving(true);
       setError(null);
-
       const updateData = {
         DoctorName: formData.doctorName,
         DoctorLastname: formData.doctorLastname,
@@ -159,7 +155,6 @@ useEffect(() => {
         DoctorPhone: formData.doctorPhone,
         DoctorPhone2: formData.doctorPhone2,
       };
-
       await axiosInstance.put(`/doctors/update/${doctorId}`, updateData);
       setShowSuccessModal(true);
     } catch (error) {
@@ -176,7 +171,7 @@ useEffect(() => {
 
   return (
     <div className="max-w-4xl mx-auto mt-10">
-      {/* Loading indicator - same style as patients view */}
+      {/* Loading indicator */}
       {isLoading && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
           <div className="flex items-center">
@@ -185,19 +180,16 @@ useEffect(() => {
           </div>
         </div>
       )}
-
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
-
       {showSuccessModal && (
         <div className="fixed top-30 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded shadow-lg">
           Doctor information updated successfully!
         </div>
       )}
-
       <div className="flex justify-center items-center gap-4 mb-8">
         {steps.map((step, index) => (
           <div
@@ -211,7 +203,6 @@ useEffect(() => {
           </div>
         ))}
       </div>
-
       <div className="bg-white rounded-xl shadow-md p-6">
         <form onSubmit={handleFormSubmit}>
           {currentStep === 1 && (
@@ -301,7 +292,6 @@ useEffect(() => {
               </div>
             </div>
           )}
-
           {currentStep === 2 && (
             <div>
               <h3 className="text-lg font-semibold mb-4">Professional Information</h3>
@@ -342,7 +332,6 @@ useEffect(() => {
               </div>
             </div>
           )}
-
           {currentStep === 3 && (
             <div>
               <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
@@ -372,7 +361,6 @@ useEffect(() => {
               </div>
             </div>
           )}
-
           <div className="flex justify-between mt-6">
             <button
               type="button"
@@ -416,7 +404,6 @@ useEffect(() => {
           </div>
         </form>
       </div>
-
       <div className="flex justify-center gap-2 mt-4">
         {steps.map((_, index) => (
           <div

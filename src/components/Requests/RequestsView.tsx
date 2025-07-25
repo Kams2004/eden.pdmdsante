@@ -62,27 +62,26 @@ const RequestsView: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<string>('');
   const [customMessage, setCustomMessage] = useState<string>('');
   const [urgency, setUrgency] = useState<'low' | 'medium' | 'high'>('low');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(false); // Loading state
-  const itemsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(false);
+  const itemsPerPage: number = 5;
   const [sentRequests, setSentRequests] = useState<Request[]>([]);
 
   const fetchUserRequests = async () => {
     try {
       const userData = JSON.parse(localStorage.getItem('userData') || '{}');
       const userId = userData.id;
-
       if (userId) {
         const response = await axiosInstance.get<ApiRequest[]>(`/requete/get_requests/${userId}`);
-        const requests = response.data.map((req: ApiRequest) => ({
+        const requests: Request[] = response.data.map((req: ApiRequest) => ({
           id: String(req.id),
           type: req.commission ? 'Commission Mismatch' :
                 req.revendication_examen ? 'Patient Record Issue' :
                 req.error ? 'System Error' : 'Payment Delay',
           description: req.message,
-          urgency: 'low',
+          urgency: 'low', // Default urgency, adjust as needed
           status: req.valide ? 'approved' : 'pending',
           customMessage: req.message,
           createdAt: req.CreatedAt,
@@ -102,8 +101,7 @@ const RequestsView: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRequest || !customMessage) return;
-
-    setLoading(true); // Set loading to true when starting the request
+    setLoading(true);
 
     const selectedPredefinedRequest = predefinedRequests.find(r => r.id === selectedRequest);
     if (!selectedPredefinedRequest) {
@@ -128,13 +126,9 @@ const RequestsView: React.FC = () => {
     };
 
     try {
-      const response = await axiosInstance.post('/requete/add', requestData);
+      await axiosInstance.post('/requete/add', requestData);
       showSuccessToast('Request sent successfully');
-
-      // Refetch requests to update the list
       await fetchUserRequests();
-
-      // Reset form
       setSelectedRequest('');
       setCustomMessage('');
       setUrgency('low');
@@ -142,11 +136,11 @@ const RequestsView: React.FC = () => {
       console.error('Error sending request:', error);
       showErrorToast('Failed to send request');
     } finally {
-      setLoading(false); // Set loading to false when the request is completed
+      setLoading(false);
     }
   };
 
-  const filteredRequests = sentRequests.filter(request => {
+  const filteredRequests = sentRequests.filter((request: Request) => {
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
     const matchesSearch =
       request.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -155,9 +149,9 @@ const RequestsView: React.FC = () => {
     return matchesStatus && matchesSearch;
   });
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentRequests = filteredRequests.slice(indexOfFirstItem, indexOfLastItem);
+  const indexOfLastItem: number = currentPage * itemsPerPage;
+  const indexOfFirstItem: number = indexOfLastItem - itemsPerPage;
+  const currentRequests: Request[] = filteredRequests.slice(indexOfFirstItem, indexOfLastItem);
 
   return (
     <div className="space-y-6">
@@ -215,7 +209,7 @@ const RequestsView: React.FC = () => {
             </label>
             <textarea
               value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomMessage(e.target.value)}
               rows={4}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Please provide any additional information about your request..."
@@ -245,7 +239,6 @@ const RequestsView: React.FC = () => {
           </div>
         </form>
       </div>
-
       {/* Sent Requests List */}
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="flex justify-between items-center mb-6">
@@ -256,14 +249,14 @@ const RequestsView: React.FC = () => {
                 type="text"
                 placeholder="Search requests..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             </div>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Status</option>
@@ -274,7 +267,7 @@ const RequestsView: React.FC = () => {
           </div>
         </div>
         <div className="space-y-4">
-          {currentRequests.map((request) => (
+          {currentRequests.map((request: Request) => (
             <div key={request.id} className="border rounded-lg p-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4">
