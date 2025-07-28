@@ -6,7 +6,7 @@ import LoginPage from './pages/LoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import DoctorDashboard from './pages/DoctorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
-import AccountantDashboard from './pages/AccountantDashboard';
+// import AccountantDashboard from './pages/AccountantDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Requests from './pages/RequestPage';
 
@@ -27,9 +27,9 @@ function App() {
             <Route path="/admin" element={<AdminDashboard />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['accountant']} />}>
+          {/* <Route element={<ProtectedRoute allowedRoles={['accountant']} />}>
             <Route path="/accountant" element={<AccountantDashboard />} />
-          </Route>
+          </Route> */}
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
