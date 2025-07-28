@@ -42,9 +42,14 @@ const StatCards: React.FC<StatCardsProps> = ({ showAmount, setShowAmount }) => {
         const response = await axiosInstance.get(`gnu_doctor/${doctorId}/research/`);
         const data = response.data;
 
-        // Extract unique patient names
-        const uniquePatients = [...new Set(data.Data.data_patients.map((patientData: { [key: string]: any }) => Object.keys(patientData)[0]))];
-        const patientsPercentage = (uniquePatients.length / 100) * 100; // Assuming 100 as a hypothetical max for percentage calculation
+        // Use type assertion to tell TypeScript that the keys are strings
+        const uniquePatients = [...new Set(
+          data.Data.data_patients.map((patientData: { [key: string]: unknown }) =>
+            Object.keys(patientData)[0]
+          )
+        )] as string[];
+
+        const patientsPercentage = (uniquePatients.length / 100) * 100;
 
         setStats({
           commission: {
@@ -55,7 +60,7 @@ const StatCards: React.FC<StatCardsProps> = ({ showAmount, setShowAmount }) => {
             total: uniquePatients.length,
             percentage: patientsPercentage,
           },
-          examinations: uniquePatients.slice(0, 3), // Display first three unique patient names
+          examinations: uniquePatients.slice(0, 3),
         });
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -76,10 +81,13 @@ const StatCards: React.FC<StatCardsProps> = ({ showAmount, setShowAmount }) => {
 
   return (
     <div className="grid grid-cols-3 gap-4 mb-4">
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-gradient-to-br from-gray-50 to-slate-100 border border-gray-200 rounded-lg p-6 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-20 h-20 bg-gray-100 opacity-30 rounded-full -translate-y-10 -translate-x-10"></div>
+        <div className="absolute bottom-0 right-0 w-24 h-24 bg-slate-200 opacity-20 rounded-full translate-y-12 translate-x-12"></div>
+        <div className="absolute top-1/2 right-1/4 w-6 h-6 bg-gray-200 opacity-40 rounded-full"></div>
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Today's Commissions</h3>
         <div className="flex items-center justify-between mb-6">
-          <Wallet className="w-8 h-8 text-blue-600" />
+          <Wallet className="w-8 h-8 text-slate-600" />
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold">
               {showAmount ? formatAmount(stats.commission.amount) : '******'}
@@ -99,7 +107,11 @@ const StatCards: React.FC<StatCardsProps> = ({ showAmount, setShowAmount }) => {
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-gradient-to-br from-purple-50 to-indigo-100 border border-purple-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-16 bg-purple-200 opacity-20 rounded-full -translate-y-8 translate-x-16 rotate-45"></div>
+        <div className="absolute bottom-0 left-0 w-20 h-20 bg-indigo-200 opacity-15 rounded-full translate-y-10 -translate-x-10"></div>
+        <div className="absolute top-3 left-1/3 w-4 h-4 bg-purple-300 opacity-30 rounded-full"></div>
+        <div className="absolute bottom-3 right-1/3 w-8 h-8 bg-indigo-300 opacity-20 rounded-full"></div>
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Today's Registered Patients</h3>
         <CircularProgress
           percentage={stats.patients.percentage}
@@ -108,12 +120,16 @@ const StatCards: React.FC<StatCardsProps> = ({ showAmount, setShowAmount }) => {
           label="Patients"
         />
       </div>
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 left-1/2 w-16 h-16 bg-blue-100 opacity-25 rounded-full -translate-y-8 -translate-x-8"></div>
+        <div className="absolute bottom-0 right-0 w-14 h-14 bg-indigo-100 opacity-30 rounded-full translate-y-7 translate-x-7"></div>
+        <div className="absolute top-1/4 left-0 w-10 h-10 bg-blue-200 opacity-20 rounded-full -translate-x-5"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-6 h-6 bg-indigo-200 opacity-25 rounded-full"></div>
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Patient Names</h3>
         <div>
           {stats.examinations.map((name, index) => (
             <div key={index} className="flex items-center mb-2">
-              <User className="w-5 h-5 mr-2 text-gray-500" />
+              <User className="w-5 h-5 mr-2 text-blue-500" />
               <span className="text-gray-700">{name}</span>
             </div>
           ))}

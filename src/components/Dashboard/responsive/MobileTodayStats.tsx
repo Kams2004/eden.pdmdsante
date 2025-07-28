@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, Eye, EyeOff, Users, User } from 'lucide-react';
 import axiosInstance from "../../../api/axioConfig";
 
-const CircularProgress = ({ percentage, icon: Icon }) => {
+// Define the props for the CircularProgress component
+interface CircularProgressProps {
+  percentage: number;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const CircularProgress: React.FC<CircularProgressProps> = ({ percentage, icon: Icon }) => {
   return (
     <div className="relative w-16 h-16">
       <svg className="w-full h-full" viewBox="0 0 36 36">
@@ -29,9 +35,22 @@ const CircularProgress = ({ percentage, icon: Icon }) => {
   );
 };
 
-const MobileTodayStats = () => {
+// Define the type for the stats state
+interface Stats {
+  commission: {
+    amount: number;
+    count: number;
+  };
+  patients: {
+    total: number;
+    percentage: number;
+  };
+  patientNames: string[];
+}
+
+const MobileTodayStats: React.FC = () => {
   const [showCommissions, setShowCommissions] = useState<boolean>(false);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     commission: {
       amount: 0,
       count: 0,
@@ -44,40 +63,47 @@ const MobileTodayStats = () => {
   });
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const userDataString = localStorage.getItem('userData');
-        const userData = userDataString ? JSON.parse(userDataString) : null;
-        const doctorId = userData?.doctor_id || '65';
-        const response = await axiosInstance.get(`gnu_doctor/${doctorId}/research/`);
-        const data = response.data;
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const userDataString = localStorage.getItem('userData');
+      const userData = userDataString ? JSON.parse(userDataString) : null;
+      const doctorId = userData?.doctor_id || '65';
+      const response = await axiosInstance.get(`gnu_doctor/${doctorId}/research/`);
+      const data = response.data;
 
-        const uniquePatients = [...new Set(data.Data.data_patients.map((patientData) => Object.keys(patientData)[0]))];
-        const patientsPercentage = (uniquePatients.length / 100) * 100;
+      // Use type assertion to tell TypeScript that the keys are strings
+      const uniquePatients = [...new Set(
+        data.Data.data_patients.map((patientData: { [key: string]: unknown }) =>
+          Object.keys(patientData)[0]
+        )
+      )] as string[];
 
-        setStats({
-          commission: {
-            amount: data.Data.commission,
-            count: data.number,
-          },
-          patients: {
-            total: uniquePatients.length,
-            percentage: patientsPercentage,
-          },
-          patientNames: uniquePatients.slice(0, 3),
-        });
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      const patientsPercentage = (uniquePatients.length / 100) * 100;
 
-    fetchData();
-  }, []);
+      setStats({
+        commission: {
+          amount: data.Data.commission,
+          count: data.number,
+        },
+        patients: {
+          total: uniquePatients.length,
+          percentage: patientsPercentage,
+        },
+        patientNames: uniquePatients.slice(0, 3),
+      });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const formatAmount = (amount) => {
+  fetchData();
+}, []);
+
+
+  const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'XAF',
@@ -89,12 +115,11 @@ const MobileTodayStats = () => {
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-4">
-        {/* Today's Commissions Loading */}
+        {/* Loading state JSX */}
         <div className="bg-gradient-to-br from-gray-50 to-slate-100 border border-gray-200 rounded-lg p-4 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 left-0 w-20 h-20 bg-gray-100 opacity-30 rounded-full -translate-y-10 -translate-x-10"></div>
           <div className="absolute bottom-0 right-0 w-24 h-24 bg-slate-200 opacity-20 rounded-full translate-y-12 translate-x-12"></div>
           <div className="absolute top-1/2 right-1/4 w-6 h-6 bg-gray-200 opacity-40 rounded-full"></div>
-
           <div className="flex items-center justify-between mb-4 relative z-10">
             <span className="text-gray-700 font-bold">Today's Commissions</span>
           </div>
@@ -102,11 +127,7 @@ const MobileTodayStats = () => {
             <Wallet className="w-6 h-6 text-slate-600 mr-4" />
             <div className="flex space-x-1">
               {[1, 2, 3].map((i) => (
-                <div 
-                  key={i}
-                  className="w-2 h-2 bg-gray-600 rounded-full animate-bounce"
-                  style={{ animationDelay: `${i * 0.1}s` }}
-                />
+                <div key={i} className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }}></div>
               ))}
             </div>
           </div>
@@ -114,23 +135,15 @@ const MobileTodayStats = () => {
             <Users className="w-4 h-4 mr-1" />
             <div className="flex space-x-1">
               {[1, 2, 3].map((i) => (
-                <div 
-                  key={i}
-                  className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"
-                  style={{ animationDelay: `${i * 0.1}s` }}
-                />
+                <div key={i} className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }}></div>
               ))}
             </div>
           </div>
         </div>
-
-        {/* Today's Registered Patients Loading */}
+        {/* Additional loading containers */}
         <div className="bg-gradient-to-br from-purple-50 to-indigo-100 border border-purple-100 rounded-lg p-4 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-16 bg-purple-200 opacity-20 rounded-full -translate-y-8 translate-x-16 rotate-45"></div>
           <div className="absolute bottom-0 left-0 w-20 h-20 bg-indigo-200 opacity-15 rounded-full translate-y-10 -translate-x-10"></div>
-          <div className="absolute top-3 left-1/3 w-4 h-4 bg-purple-300 opacity-30 rounded-full"></div>
-          <div className="absolute bottom-3 right-1/3 w-8 h-8 bg-indigo-300 opacity-20 rounded-full"></div>
-
           <div className="flex items-center justify-between mb-4 relative z-10">
             <span className="text-gray-700 font-bold">Today's Registered Patients</span>
           </div>
@@ -139,11 +152,7 @@ const MobileTodayStats = () => {
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="flex space-x-1">
                   {[1, 2, 3].map((i) => (
-                    <div 
-                      key={i}
-                      className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
-                      style={{ animationDelay: `${i * 0.1}s` }}
-                    />
+                    <div key={i} className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }}></div>
                   ))}
                 </div>
               </div>
@@ -151,25 +160,14 @@ const MobileTodayStats = () => {
             <div className="ml-4">
               <div className="flex space-x-1 mb-2">
                 {[1, 2, 3].map((i) => (
-                  <div 
-                    key={i}
-                    className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"
-                    style={{ animationDelay: `${i * 0.1}s` }}
-                  />
+                  <div key={i} className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }}></div>
                 ))}
               </div>
               <div className="text-sm text-gray-600">Patients</div>
             </div>
           </div>
         </div>
-
-        {/* Patient Names Loading */}
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-4 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 left-1/2 w-16 h-16 bg-blue-100 opacity-25 rounded-full -translate-y-8 -translate-x-8"></div>
-          <div className="absolute bottom-0 right-0 w-14 h-14 bg-indigo-100 opacity-30 rounded-full translate-y-7 translate-x-7"></div>
-          <div className="absolute top-1/4 left-0 w-10 h-10 bg-blue-200 opacity-20 rounded-full -translate-x-5"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-6 h-6 bg-indigo-200 opacity-25 rounded-full"></div>
-
           <div className="flex items-center justify-between mb-4 relative z-10">
             <span className="text-gray-700 font-bold">Today's Patient Names</span>
           </div>
@@ -179,17 +177,12 @@ const MobileTodayStats = () => {
               <div key={i} className="flex items-center mb-2 p-2 rounded">
                 <div className="flex space-x-1">
                   {[1, 2, 3].map((j) => (
-                    <div 
-                      key={j}
-                      className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"
-                      style={{ animationDelay: `${j * 0.1}s` }}
-                    />
+                    <div key={j} className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: `${j * 0.1}s` }}></div>
                   ))}
                 </div>
               </div>
             ))}
           </div>
-          <hr className="mt-4 border-blue-200 relative z-10" />
         </div>
       </div>
     );
@@ -201,8 +194,6 @@ const MobileTodayStats = () => {
       <div className="bg-gradient-to-br from-gray-50 to-slate-100 border border-gray-200 rounded-lg p-4 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 left-0 w-20 h-20 bg-gray-100 opacity-30 rounded-full -translate-y-10 -translate-x-10"></div>
         <div className="absolute bottom-0 right-0 w-24 h-24 bg-slate-200 opacity-20 rounded-full translate-y-12 translate-x-12"></div>
-        <div className="absolute top-1/2 right-1/4 w-6 h-6 bg-gray-200 opacity-40 rounded-full"></div>
-
         <div className="flex items-center justify-between mb-2 relative z-10">
           <span className="text-gray-700 font-bold">Today's Commissions</span>
         </div>
@@ -220,14 +211,10 @@ const MobileTodayStats = () => {
           <span>{stats.commission.count} commissions</span>
         </div>
       </div>
-
       {/* Today's Registered Patients Container */}
       <div className="bg-gradient-to-br from-purple-50 to-indigo-100 border border-purple-100 rounded-lg p-4 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-16 bg-purple-200 opacity-20 rounded-full -translate-y-8 translate-x-16 rotate-45"></div>
         <div className="absolute bottom-0 left-0 w-20 h-20 bg-indigo-200 opacity-15 rounded-full translate-y-10 -translate-x-10"></div>
-        <div className="absolute top-3 left-1/3 w-4 h-4 bg-purple-300 opacity-30 rounded-full"></div>
-        <div className="absolute bottom-3 right-1/3 w-8 h-8 bg-indigo-300 opacity-20 rounded-full"></div>
-
         <div className="flex items-center justify-between mb-2 relative z-10">
           <span className="text-gray-700 font-bold">Today's Registered Patients</span>
         </div>
@@ -239,14 +226,8 @@ const MobileTodayStats = () => {
           </div>
         </div>
       </div>
-
       {/* Patient Names Container */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-4 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 w-16 h-16 bg-blue-100 opacity-25 rounded-full -translate-y-8 -translate-x-8"></div>
-        <div className="absolute bottom-0 right-0 w-14 h-14 bg-indigo-100 opacity-30 rounded-full translate-y-7 translate-x-7"></div>
-        <div className="absolute top-1/4 left-0 w-10 h-10 bg-blue-200 opacity-20 rounded-full -translate-x-5"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-6 h-6 bg-indigo-200 opacity-25 rounded-full"></div>
-
         <div className="flex items-center justify-between mb-2 relative z-10">
           <span className="text-gray-700 font-bold">Today's Patient Names</span>
         </div>
@@ -259,7 +240,6 @@ const MobileTodayStats = () => {
             </div>
           ))}
         </div>
-        <hr className="mt-4 border-blue-200 relative z-10" />
       </div>
     </div>
   );

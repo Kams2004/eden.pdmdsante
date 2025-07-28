@@ -25,9 +25,14 @@ axiosInstance.interceptors.request.use(
   }
 );
 
+// Define the type for the cookies object
+interface Cookies {
+  [key: string]: string;
+}
+
 // Optional: Manually set cookies if needed (not recommended for sensitive data)
 const setCookiesInHeaders = () => {
-  const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+  const cookies: Cookies = document.cookie.split(';').reduce((acc: Cookies, cookie) => {
     const [key, value] = cookie.trim().split('=');
     acc[key] = value;
     return acc;
@@ -42,15 +47,19 @@ const setCookiesInHeaders = () => {
 // Call this function before making requests if manually setting cookies
 setCookiesInHeaders();
 
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
+// Add a response interceptor to handle token expiration
+axiosInstance.interceptors.response.use(
+  (response) => {
+    return response;
   },
   (error) => {
+    if (error.response && error.response.data && error.response.data.msg === 'Token has expired') {
+      // Clear authentication data
+      clearAuthData();
+
+      // Redirect to login page
+      window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );

@@ -2,6 +2,28 @@ import React, { useState, useRef, useEffect } from 'react';
 import axiosInstance from '../../api/axioConfig';
 import { Plus, Pencil, Trash2, Search, User as UserMd, Phone, Mail, Download, Check, X, AtSign } from 'lucide-react';
 
+// Define the props for the ToggleSwitch component
+interface ToggleSwitchProps {
+  isOn: boolean;
+  handleToggle: () => void;
+}
+
+const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ isOn, handleToggle }) => {
+  return (
+    <div className="flex items-center">
+      <label className="text-sm text-gray-700 mr-2">Send Email</label>
+      <div
+        className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer ${isOn ? 'bg-blue-500' : 'bg-gray-300'}`}
+        onClick={handleToggle}
+      >
+        <div
+          className={`bg-white w-4 h-4 rounded-full shadow-md transform ${isOn ? 'translate-x-6' : 'translate-x-0'}`}
+        ></div>
+      </div>
+    </div>
+  );
+};
+
 interface Doctor {
   id: string;
   name: string;
@@ -20,22 +42,6 @@ interface Doctor {
   DoctorNat?: string;
   DoctorPOB?: string;
 }
-
-const ToggleSwitch = ({ isOn, handleToggle }) => {
-  return (
-    <div className="flex items-center">
-      <label className="text-sm text-gray-700 mr-2">Send Email</label>
-      <div
-        className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer ${isOn ? 'bg-blue-500' : 'bg-gray-300'}`}
-        onClick={handleToggle}
-      >
-        <div
-          className={`bg-white w-4 h-4 rounded-full shadow-md transform ${isOn ? 'translate-x-6' : 'translate-x-0'}`}
-        ></div>
-      </div>
-    </div>
-  );
-};
 
 const Doctors: React.FC = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -56,7 +62,6 @@ const Doctors: React.FC = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [isStaticSearch, setIsStaticSearch] = useState(false);
   const itemsPerPage = 6;
-
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
@@ -94,7 +99,6 @@ const Doctors: React.FC = () => {
         setIsLoadingDoctors(false);
       }
     };
-
     fetchDoctors();
   }, []);
 
@@ -105,7 +109,6 @@ const Doctors: React.FC = () => {
         setIsStaticSearch(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -166,7 +169,6 @@ const Doctors: React.FC = () => {
 
   const handleAddDoctor = async () => {
     if (!newDoctorNO.trim()) return;
-
     setIsAddingDoctor(true);
     try {
       const response = await axiosInstance.get(`/doctors/extract/${newDoctorNO}/`);
@@ -197,7 +199,6 @@ const Doctors: React.FC = () => {
 
   const handleSaveEdit = async () => {
     if (!editingDoctor) return;
-
     const updateData = {
       DoctorCNI: editingDoctor.DoctorCNI,
       DoctorDOB: editingDoctor.DoctorDOB,
@@ -211,14 +212,12 @@ const Doctors: React.FC = () => {
       Speciality: editingDoctor.speciality,
       id: editingDoctor.id,
     };
-
     try {
       const response = await axiosInstance.put(`/doctors/update/${editingDoctor.id}`, updateData);
       if (response.status === 200) {
         setDoctors(doctors.map(doctor => doctor.id === editingDoctor.id ? editingDoctor : doctor));
         setIsModalOpen(false);
         setUpdateSuccess(true);
-
         if (sendEmail) {
           await axiosInstance.post('/users/send_email/', { email: editingDoctor.email });
           setEmailSent(true);

@@ -112,9 +112,7 @@ const MobilePatientsList: React.FC<MobilePatientsListProps> = ({ onDetailsClick 
           )}
         </button>
 
-        <button className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-          <List size={18} />
-        </button>
+
       </div>
 
       {loading ? (

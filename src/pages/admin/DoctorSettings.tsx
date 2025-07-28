@@ -45,41 +45,48 @@ const DoctorSettings: React.FC = () => {
     fetchActualities();
   }, []);
 
-  const handleAddOrEdit = async (actuality: Partial<Actuality>) => {
-    const formData = new FormData();
-    formData.append('titre', actuality.title);
-    formData.append('description', actuality.description);
-    formData.append('date', actuality.date);
-    formData.append('url', actuality.link);
-    formData.append('is_visible', actuality.visible.toString());
+const handleAddOrEdit = async (actuality: Partial<Actuality>) => {
+  const formData = new FormData();
+
+  // Ensure that each value is defined before appending
+  formData.append('titre', actuality.title || '');
+  formData.append('description', actuality.description || '');
+  formData.append('date', actuality.date || '');
+  formData.append('url', actuality.link || '');
+  formData.append('is_visible', (actuality.visible ?? true).toString());
+
+  // Handle the image separately if it's a file input
+  if (actuality.image) {
     formData.append('image', actuality.image);
+  }
 
-    try {
-      await axios.post('http://65.21.73.170:7600/blog/add', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+  try {
+    await axios.post('http://65.21.73.170:7600/blog/add', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
 
-      // Refresh actualities after adding/editing
-      const response = await axios.get('http://65.21.73.170:7600/blog/');
-      const fetchedActualities = response.data.map((item: any) => ({
-        id: item.id,
-        title: item.titre,
-        date: item.date,
-        description: item.description,
-        image: item.image_url,
-        link: item.url,
-        visible: item.is_visible,
-      }));
-      setActualities(fetchedActualities);
+    // Refresh actualities after adding/editing
+    const response = await axios.get('http://65.21.73.170:7600/blog/');
+    const fetchedActualities = response.data.map((item: any) => ({
+      id: item.id,
+      title: item.titre,
+      date: item.date,
+      description: item.description,
+      image: item.image_url,
+      link: item.url,
+      visible: item.is_visible,
+    }));
 
-      setShowModal(false);
-      setEditingActuality(null);
-    } catch (error) {
-      console.error('Error adding/editing actuality:', error);
-    }
-  };
+    setActualities(fetchedActualities);
+    setShowModal(false);
+    setEditingActuality(null);
+  } catch (error) {
+    console.error('Error adding/editing actuality:', error);
+  }
+};
+
 
   const handleToggleVisibility = (id: number) => {
     setActualities((prev) =>

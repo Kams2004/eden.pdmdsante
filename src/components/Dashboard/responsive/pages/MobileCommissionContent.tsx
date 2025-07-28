@@ -22,6 +22,7 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
   const [selectAll, setSelectAll] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const patientsPerPage = 5;
@@ -55,6 +56,7 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
         }))
       );
       setPatients(formattedPatients);
+      setFilteredPatients(formattedPatients);
     } catch (error) {
       console.error('Error fetching patients data:', error);
     } finally {
@@ -66,6 +68,27 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
     fetchPatientsData();
   }, []);
 
+  useEffect(() => {
+    const filterPatientsByDate = () => {
+      let filtered = [...patients];
+
+      if (startDate) {
+        const start = new Date(startDate);
+        filtered = filtered.filter(patient => new Date(patient.transferDate) >= start);
+      }
+
+      if (endDate) {
+        const end = new Date(endDate);
+        filtered = filtered.filter(patient => new Date(patient.transferDate) <= end);
+      }
+
+      setFilteredPatients(filtered);
+      setCurrentPage(1);
+    };
+
+    filterPatientsByDate();
+  }, [startDate, endDate, patients]);
+
   const handleFilter = () => {
     console.log('Filter clicked with dates:', startDate, endDate);
   };
@@ -74,11 +97,11 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
     setStartDate('');
     setEndDate('');
     setSelectAll(false);
-    setPatients(patients.map(patient => ({ ...patient, selected: false })));
+    setFilteredPatients(patients.map(patient => ({ ...patient, selected: false })));
   };
 
   const handlePrint = () => {
-    const selectedPatients = patients.filter(patient => patient.selected);
+    const selectedPatients = filteredPatients.filter(patient => patient.selected);
     if (selectedPatients.length === 0) {
       alert("Please select at least one patient to print");
       return;
@@ -146,19 +169,19 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
   };
 
   const handleSelectAll = () => {
-    const updatedPatients = patients.map(patient => ({
+    const updatedPatients = filteredPatients.map(patient => ({
       ...patient,
       selected: !selectAll
     }));
-    setPatients(updatedPatients);
+    setFilteredPatients(updatedPatients);
     setSelectAll(!selectAll);
   };
 
   const handlePatientSelect = (id: string) => {
-    const updatedPatients = patients.map(patient =>
+    const updatedPatients = filteredPatients.map(patient =>
       patient.id === id ? { ...patient, selected: !patient.selected } : patient
     );
-    setPatients(updatedPatients);
+    setFilteredPatients(updatedPatients);
   };
 
   const getFactureColor = (facture: string) => {
@@ -167,8 +190,8 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
 
   const indexOfLastPatient = currentPage * patientsPerPage;
   const indexOfFirstPatient = indexOfLastPatient - patientsPerPage;
-  const currentPatients = patients.slice(indexOfFirstPatient, indexOfLastPatient);
-  const totalPages = Math.ceil(patients.length / patientsPerPage);
+  const currentPatients = filteredPatients.slice(indexOfFirstPatient, indexOfLastPatient);
+  const totalPages = Math.ceil(filteredPatients.length / patientsPerPage);
 
   const goToNextPage = () => {
     setCurrentPage(prevPage => Math.min(prevPage + 1, totalPages));
@@ -186,7 +209,6 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
           <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
           <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
         </div>
-
         {/* Loading for filter section */}
         <div className="px-4 sm:px-6 py-4 bg-slate-50/50 border-b border-slate-200">
           <div className="space-y-4 mb-4">
@@ -194,7 +216,6 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
               <div className="h-4 w-32 bg-slate-200 rounded animate-pulse"></div>
               <div className="h-10 w-10 bg-slate-200 rounded-lg animate-pulse"></div>
             </div>
-
             <div className="flex flex-row space-x-2 w-full">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex-1 p-2 bg-slate-200 rounded-lg flex items-center justify-center">
@@ -213,32 +234,27 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
           </div>
           <div className="h-4 w-48 bg-slate-200 rounded animate-pulse"></div>
         </div>
-
         {/* Loading for patient cards */}
         <div className="px-4 py-2">
           <div className="flex items-center mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
             <div className="h-4 w-4 bg-slate-200 rounded mr-3"></div>
             <div className="h-4 w-32 bg-slate-200 rounded"></div>
           </div>
-
           <div className="space-y-3">
             {[...Array(5)].map((_, index) => (
               <div key={index} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-4 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
                 <div className="absolute bottom-0 left-0 w-12 h-12 bg-blue-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
-
                 <div className="flex items-start justify-between mb-3 relative z-10">
                   <div className="flex items-center space-x-3">
                     <div className="h-4 w-4 bg-slate-200 rounded"></div>
                     <div className="h-6 w-24 bg-slate-200 rounded-full"></div>
                   </div>
                 </div>
-
                 <div className="mb-3 relative z-10">
                   <div className="h-6 w-3/4 bg-slate-200 rounded mb-2"></div>
                   <div className="h-10 w-full bg-slate-200 rounded-lg"></div>
                 </div>
-
                 <div className="flex justify-end items-center pt-3 border-t border-blue-200 relative z-10">
                   <div className="h-6 w-20 bg-slate-200 rounded-full"></div>
                 </div>
@@ -246,7 +262,6 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
             ))}
           </div>
         </div>
-
         {/* Loading for pagination */}
         <div className="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50">
           <div className="flex items-center justify-between">
@@ -255,7 +270,6 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
             <div className="h-8 w-24 bg-slate-200 rounded-lg"></div>
           </div>
         </div>
-
         {/* Loading for total commission */}
         <div className="px-4 sm:px-6 py-4 border-t-2 border-blue-200 bg-blue-50 sticky bottom-0">
           <div className="h-6 w-48 bg-slate-200 rounded mx-auto"></div>
@@ -329,7 +343,7 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
             </button>
           </div>
         </div>
-        <p className="text-sm text-slate-600">Showing {indexOfFirstPatient + 1} to {Math.min(indexOfLastPatient, patients.length)} of {patients.length} patients</p>
+        <p className="text-sm text-slate-600">Showing {indexOfFirstPatient + 1} to {Math.min(indexOfLastPatient, filteredPatients.length)} of {filteredPatients.length} patients</p>
       </div>
       <div className="px-4 py-2">
         <div className="flex items-center mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -339,7 +353,7 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
             onChange={handleSelectAll}
             className="w-4 h-4 text-blue-500 border-slate-300 rounded mr-3 focus:ring-2 focus:ring-blue-400"
           />
-          <span className="text-sm font-medium text-slate-700">Select All ({patients.filter(p => p.selected).length} selected)</span>
+          <span className="text-sm font-medium text-slate-700">Select All ({filteredPatients.filter(p => p.selected).length} selected)</span>
         </div>
         <div className="space-y-3">
           {currentPatients.map((patient, index) => (
@@ -403,7 +417,7 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
         <div className="text-center sm:text-right">
           <span className="text-lg sm:text-xl font-semibold text-slate-800">
             Total Commission: <span className="text-blue-600 font-bold">
-              {patients.reduce((sum, patient) => {
+              {filteredPatients.reduce((sum, patient) => {
                 const amount = parseFloat(patient.commission.replace(/[^\d.]/g, ''));
                 return sum + (isNaN(amount) ? 0 : amount);
               }, 0).toFixed(2)} FCFA

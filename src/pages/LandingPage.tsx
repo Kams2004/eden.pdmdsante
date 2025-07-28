@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import pdmdLogo from "./pdmd.png";
 import imgBackground from "./img.png";
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 const BASE_URL = 'http://65.21.73.170:7600';
 
@@ -13,7 +13,7 @@ const LandingPage = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSendId = async (e) => {
+  const handleSendId = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setSuccessMessage("");
@@ -40,7 +40,8 @@ const LandingPage = () => {
         setError(response.data.Message || "Erreur lors de l'envoi de l'ID.");
       }
     } catch (err) {
-      setError(err.response?.data?.Message || "Erreur lors de l'envoi de l'ID.");
+      const error = err as AxiosError<{ Message: string }>;
+      setError(error.response?.data?.Message || "Erreur lors de l'envoi de l'ID.");
     } finally {
       setLoading(false);
       setTimeout(() => {
@@ -86,7 +87,6 @@ const LandingPage = () => {
           </button>
         </form>
       </div>
-
       {/* Right Section */}
       <div
         className="w-full md:w-2/3 relative"

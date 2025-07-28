@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import pdmdLogo from "./pdmd.png";
 import imgBackground from "./img.png";
+import axios, { AxiosError } from 'axios';
 import axiosInstance from '../api/axioConfig'; // Import the configured axios instance
 
 const RequestPage = () => {
@@ -16,7 +17,7 @@ const RequestPage = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prevState => ({
       ...prevState,
@@ -24,7 +25,7 @@ const RequestPage = () => {
     }));
   };
 
-  const handleSendRequest = async (e) => {
+  const handleSendRequest = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setSuccessMessage("");
@@ -48,14 +49,14 @@ const RequestPage = () => {
 
     try {
       const response = await axiosInstance.post('/requete/add', requestBody);
-
       if (response.status === 200) {
         setSuccessMessage(`Demande envoyée avec succès à ${formData.email}`);
       } else {
         setError(response.data.Message || "Erreur lors de l'envoi de la demande.");
       }
     } catch (err) {
-      setError(err.response?.data?.Message || "Erreur lors de l'envoi de la demande.");
+      const error = err as AxiosError<{ Message: string }>;
+      setError(error.response?.data?.Message || "Erreur lors de l'envoi de la demande.");
     } finally {
       setLoading(false);
       setTimeout(() => {
@@ -126,7 +127,7 @@ const RequestPage = () => {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={formData.message}
             onChange={handleInputChange}
-            rows="4"
+            rows={4}
           />
           <button
             type="submit"
@@ -139,7 +140,6 @@ const RequestPage = () => {
           </button>
         </form>
       </div>
-
       {/* Right Section */}
       <div
         className="w-full md:w-2/3 relative"

@@ -6,23 +6,19 @@ import Doctors from './accountant/Doctors';
 import Report from './accountant/Report';
 import Settings from './accountant/Settings';
 import Transactions from './accountant/Transactions';
-import backgroundImage from './61804.jpg'; // Replace with the correct path to your background image
+import backgroundImage from './61804.jpg'; // Ensure the correct path to your background image
 
 const AccountantDashboard: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showLanguages, setShowLanguages] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
 
-  const user = {
-    name: "Accountant User",
-    initials: "AU"
-  };
-
   const stats = {
     totalRevenue: 125000,
     pendingPayments: 15000,
     completedPayments: 110000,
-    monthlyGrowth: 12.5
+    monthlyGrowth: 12.5,
+    totalTransactions: 1000 // Ensure this property is included
   };
 
   const renderView = () => {
@@ -55,16 +51,14 @@ const AccountantDashboard: React.FC = () => {
       <div className="fixed top-0 left-0 right-0 z-50">
         <Header showLanguages={showLanguages} setShowLanguages={setShowLanguages} />
       </div>
-      
+
       <div className="pt-24 px-4 pb-4 flex">
-        <AccountantSidebar 
+        <AccountantSidebar
           isExpanded={isExpanded}
           setIsExpanded={setIsExpanded}
-          user={user}
           onMenuClick={setCurrentView}
           currentView={currentView}
         />
-
         <main className="ml-24 w-full transition-all duration-300">
           {renderView()}
         </main>

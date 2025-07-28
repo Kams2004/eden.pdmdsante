@@ -2,9 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import axiosInstance from "../../api/axioConfig";
 
+// Define the type for channel data
+interface ChannelData {
+  channel: string;
+  value: number;
+}
+
 const StatusByChannel: React.FC = () => {
-  const [channelData, setChannelData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [channelData, setChannelData] = useState<ChannelData[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchChannelData = async () => {
@@ -15,14 +21,14 @@ const StatusByChannel: React.FC = () => {
           console.error('No user data found in localStorage');
           return;
         }
-
         const { doctor_id } = JSON.parse(userData);
         const response = await axiosInstance.get(`gnu_doctor/${doctor_id}/exams-patients`);
         const { data_patients } = response.data;
 
-        const channelCounts = data_patients.reduce((acc: any, patientData: any) => {
-          const examType = patientData[Object.keys(patientData)[0]][0];
-          const amount = parseFloat(patientData[Object.keys(patientData)[0]][1]);
+        // Define the type for the accumulator
+        const channelCounts: Record<string, ChannelData> = data_patients.reduce((acc: Record<string, ChannelData>, patientData: any) => {
+          const examType = Object.keys(patientData)[0];
+          const amount = parseFloat(patientData[examType][1]);
 
           if (!acc[examType]) {
             acc[examType] = { channel: examType, value: 0 };
@@ -32,8 +38,7 @@ const StatusByChannel: React.FC = () => {
         }, {});
 
         // Convert the object to an array and sort by value in descending order
-        const formattedChannelData = Object.values(channelCounts).sort((a, b) => b.value - a.value);
-
+        const formattedChannelData: ChannelData[] = Object.values(channelCounts).sort((a, b) => b.value - a.value);
         setChannelData(formattedChannelData);
       } catch (error) {
         console.error('Error fetching status by channel data:', error);
@@ -56,7 +61,6 @@ const StatusByChannel: React.FC = () => {
           </div>
         </div>
       )}
-
       <h3 className="text-lg font-semibold text-gray-800 mb-4">Status by Channel</h3>
       <div className="h-[300px]">
         {loading ? (
