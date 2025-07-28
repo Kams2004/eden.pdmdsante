@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, List, Search } from 'lucide-react';
 import axiosInstance from "../../api/axioConfig";
 

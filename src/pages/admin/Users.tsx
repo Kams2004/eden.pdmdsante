@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axiosInstance from '../../api/axioConfig';
 import { Plus, Pencil, Trash2, Search, MoreVertical } from 'lucide-react';
 import UserModal from '../../components/admin/UserModal';

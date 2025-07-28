@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { X, LayoutDashboard, User, FileText, DollarSign, Settings } from 'lucide-react';
 
 const MobileSidebar = ({ sidebarOpen, setSidebarOpen, onMenuClick, currentView }) => {
