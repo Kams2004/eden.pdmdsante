@@ -10,7 +10,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ showLanguages, setShowLanguages }) => {
   const navigate = useNavigate();
-  const BASE_URL = 'http://65.21.73.170:7600';
+  const BASE_URL = 'https://site.pdmdsante.com/';
 
   const handleLogout = async () => {
     try {

@@ -14,7 +14,7 @@ interface DashboardHeaderProps {
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick, currentView }) => {
   const [showLanguages, setShowLanguages] = useState(false);
   const navigate = useNavigate();
-  const BASE_URL = 'http://65.21.73.170:7600';
+  const BASE_URL = 'https://site.pdmdsante.com/';
 
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' as ViewType },

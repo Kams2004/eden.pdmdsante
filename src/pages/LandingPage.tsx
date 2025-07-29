@@ -4,7 +4,7 @@ import pdmdLogo from "./pdmd.png";
 import imgBackground from "./img.png";
 import axios, { AxiosError } from 'axios';
 
-const BASE_URL = 'http://65.21.73.170:7600';
+const BASE_URL = 'https://site.pdmdsante.com/';
 
 const LandingPage = () => {
   const navigate = useNavigate();

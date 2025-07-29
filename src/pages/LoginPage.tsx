@@ -6,7 +6,7 @@ import imgBackground from "./img.png";
 import { clearAuthData } from '../api/axioConfig';
 import axiosInstance from '../api/axioConfig';
 
-const BASE_URL = 'http://65.21.73.170:7600';
+const BASE_URL = 'https://site.pdmdsante.com/';
 
 type UserType = 'doctor' | 'patient' | null;
 
