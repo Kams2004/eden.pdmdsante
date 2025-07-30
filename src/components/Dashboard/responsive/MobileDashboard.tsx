@@ -10,9 +10,11 @@ import MobileCommission from './pages/MobileCommissionContent';
 import MobileRequestsContent from './pages/MobileRequestsContent';
 import MobileSidebar from './MobileSidebar';
 import PersonalInfoForm from './pages/PersonalInfoForm';
+import MobileCommissionAnalysis from './pages/MobileCommissionAnalysis';
+
 
 // Define a type for the possible views
-type ViewType = 'dashboard' | 'patients' | 'request' | 'commissions' | 'settings' | 'toggleSidebar';
+type ViewType = 'dashboard' | 'patients' | 'request' | 'commissions' | 'commissionAnalysis' | 'settings' | 'toggleSidebar';
 
 const MobileDoctorDashboard = () => {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
@@ -51,12 +53,13 @@ const MobileDoctorDashboard = () => {
 
       {/* Content Area with Padding to Account for Fixed Header */}
       <div className="flex-grow overflow-y-auto pt-16">
-        <div className="px-4 py-6 space-y-6">
+        <div className="px-4 py-6 space-y-6 mt-2">
           {currentView === 'dashboard' && (
             <>
               <MobileStatsCards />
               <MobileTodayStats />
-              <MobileGeneralInfo />
+              <MobileGeneralInfo onMenuClick={handleMenuClick} />
+
               <MobilePatientsList onDetailsClick={handleDetailsClick} />
             </>
           )}
@@ -66,6 +69,7 @@ const MobileDoctorDashboard = () => {
           {currentView === 'request' && <MobileRequestsContent />}
           {currentView === 'commissions' && <MobileCommission />}
           {currentView === 'settings' && <PersonalInfoForm />}
+          {currentView === 'commissionAnalysis' && <MobileCommissionAnalysis />}
         </div>
       </div>
     </div>

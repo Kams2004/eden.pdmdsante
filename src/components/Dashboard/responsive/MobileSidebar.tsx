@@ -1,16 +1,47 @@
+import React, { useState, useEffect } from 'react';
+import { X, LayoutDashboard, User, FileText, DollarSign, Settings, BarChart2 } from 'lucide-react';
+import { getUserFromStorage, getUserInitials, getUserFullName, debugUserData } from './userUtils';
 
-import { X, LayoutDashboard, User, FileText, DollarSign, Settings } from 'lucide-react';
+interface MobileSidebarProps {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+  onMenuClick: (menuKey: string) => void;
+  currentView: string;
+}
 
-const MobileSidebar = ({ sidebarOpen, setSidebarOpen, onMenuClick, currentView }) => {
+const MobileSidebar: React.FC<MobileSidebarProps> = ({
+  sidebarOpen,
+  setSidebarOpen,
+  onMenuClick,
+  currentView
+}) => {
+  const [userFullName, setUserFullName] = useState('User Name');
+  const [userInitials, setUserInitials] = useState('UN');
+
+  useEffect(() => {
+    debugUserData();
+    const userData = getUserFromStorage();
+    if (userData) {
+      const fullName = getUserFullName(userData.firstName || userData.first_name, userData.lastName || userData.last_name);
+      const initials = getUserInitials(userData.firstName || userData.first_name, userData.lastName || userData.last_name);
+      setUserFullName(fullName);
+      setUserInitials(initials);
+    } else {
+      setUserFullName('User Name');
+      setUserInitials('UN');
+    }
+  }, []);
+
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
     { name: 'Patients', icon: User, key: 'patients' },
     { name: 'Requests', icon: FileText, key: 'request' },
     { name: 'Commissions', icon: DollarSign, key: 'commissions' },
+    { name: 'Commission Analysis', icon: BarChart2, key: 'commissionAnalysis' }, // New menu item
     { name: 'Settings', icon: Settings, key: 'settings' }
   ];
 
-  const handleMenuItemClick = (menuKey) => {
+  const handleMenuItemClick = (menuKey: string) => {
     onMenuClick(menuKey);
     setSidebarOpen(false);
   };
@@ -30,13 +61,13 @@ const MobileSidebar = ({ sidebarOpen, setSidebarOpen, onMenuClick, currentView }
             </button>
           </div>
         </div>
-
-        {/* Centered Welcome Text */}
         <div className="p-4 border-b border-gray-200 flex flex-col items-center justify-center">
+          <div className="bg-blue-100 text-blue-600 font-semibold rounded-full w-10 h-10 flex items-center justify-center mx-auto">
+            {userInitials}
+          </div>
           <span className="text-gray-900 font-medium text-center">Welcome,</span>
-          <span className="text-gray-900 font-medium text-center">Legba Hermine</span>
+          <span className="text-gray-900 font-medium text-center">{userFullName}</span>
         </div>
-
         <nav className="p-4">
           <ul className="space-y-2">
             {menuItems.map((item, index) => {

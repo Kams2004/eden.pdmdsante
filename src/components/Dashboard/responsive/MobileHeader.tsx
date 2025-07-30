@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Globe, LogOut, Menu, LayoutDashboard, User, FileText, DollarSign, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { getUserFromStorage, getUserInitials, debugUserData } from './userUtils';
 
-// Define the type for the possible views
 type ViewType = 'dashboard' | 'patients' | 'request' | 'commissions' | 'settings' | 'toggleSidebar';
 
 interface DashboardHeaderProps {
@@ -13,8 +13,21 @@ interface DashboardHeaderProps {
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick, currentView }) => {
   const [showLanguages, setShowLanguages] = useState(false);
+  const [userInitials, setUserInitials] = useState('UN');
   const navigate = useNavigate();
   const BASE_URL = 'https://site.pdmdsante.com/';
+
+  useEffect(() => {
+    debugUserData();
+    const userData = getUserFromStorage();
+
+    if (userData) {
+      const initials = getUserInitials(userData.firstName || userData.first_name, userData.lastName || userData.last_name);
+      setUserInitials(initials);
+    } else {
+      setUserInitials('UN');
+    }
+  }, []);
 
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' as ViewType },
@@ -58,9 +71,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick, currentV
         <button onClick={() => onMenuClick('toggleSidebar')} className="w-6 h-6 flex items-center justify-center">
           <Menu className="text-gray-600" size={18} />
         </button>
-        <img src="/pdmd.png" alt="Logo" className="h-10" />
-        <div className="flex flex-col">
-          <span className="text-gray-600 text-sm">LH</span>
+        <img src="/pdmd.png" alt="Logo" className="h-12" />
+        <div className="bg-blue-100 text-blue-600 font-semibold rounded-full w-8 h-8 flex items-center justify-center">
+          {userInitials}
         </div>
       </div>
       <div className="flex items-center space-x-3">
