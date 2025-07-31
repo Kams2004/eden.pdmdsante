@@ -12,7 +12,21 @@ interface MonthlyData {
 }
 
 interface YearlyData {
-  [key: string]: number;
+  [key: string]: {
+    [key: string]: number;
+    elements_prescription: {
+      commission: number;
+      data_patients: Array<{
+        [key: string]: [string, number, string];
+      }>;
+    };
+    elements_realisation: {
+      commission: number;
+      data_patients: Array<{
+        [key: string]: [string, number, string];
+      }>;
+    };
+  };
   Total: number;
 }
 
@@ -27,33 +41,33 @@ const MobileCommissionAnalysis: React.FC = () => {
   const [showPatientList, setShowPatientList] = useState(false);
 
   const months = [
-    { value: 1, label: 'January' },
-    { value: 2, label: 'February' },
-    { value: 3, label: 'March' },
-    { value: 4, label: 'April' },
-    { value: 5, label: 'May' },
-    { value: 6, label: 'June' },
-    { value: 7, label: 'July' },
-    { value: 8, label: 'August' },
-    { value: 9, label: 'September' },
-    { value: 10, label: 'October' },
-    { value: 11, label: 'November' },
-    { value: 12, label: 'December' }
+    { value: 1, label: 'Janvier' },
+    { value: 2, label: 'Février' },
+    { value: 3, label: 'Mars' },
+    { value: 4, label: 'Avril' },
+    { value: 5, label: 'Mai' },
+    { value: 6, label: 'Juin' },
+    { value: 7, label: 'Juillet' },
+    { value: 8, label: 'Août' },
+    { value: 9, label: 'Septembre' },
+    { value: 10, label: 'Octobre' },
+    { value: 11, label: 'Novembre' },
+    { value: 12, label: 'Décembre' }
   ];
 
   const monthsInFrench = {
-    'JANVIER': 'January',
-    'FEVRIER': 'February',
-    'MARS': 'March',
-    'AVRIL': 'April',
-    'MAI': 'May',
-    'JUIN': 'June',
-    'JUILLET': 'July',
-    'AOUT': 'August',
-    'SEPTEMBRE': 'September',
-    'OCTOBRE': 'October',
-    'NOVEMBRE': 'November',
-    'DECEMBRE': 'December'
+    'JANVIER': 'Janvier',
+    'FEVRIER': 'Février',
+    'MARS': 'Mars',
+    'AVRIL': 'Avril',
+    'MAI': 'Mai',
+    'JUIN': 'Juin',
+    'JUILLET': 'Juillet',
+    'AOUT': 'Août',
+    'SEPTEMBRE': 'Septembre',
+    'OCTOBRE': 'Octobre',
+    'NOVEMBRE': 'Novembre',
+    'DECEMBRE': 'Décembre'
   };
 
   const getDoctorId = () => {
@@ -74,7 +88,7 @@ const MobileCommissionAnalysis: React.FC = () => {
       );
       setMonthlyData(response.data);
     } catch (error) {
-      console.error('Error fetching monthly data:', error);
+      console.error('Erreur lors de la récupération des données mensuelles :', error);
     } finally {
       setLoading(false);
     }
@@ -91,7 +105,7 @@ const MobileCommissionAnalysis: React.FC = () => {
       );
       setYearlyData(response.data);
     } catch (error) {
-      console.error('Error fetching yearly data:', error);
+      console.error('Erreur lors de la récupération des données annuelles :', error);
     } finally {
       setLoading(false);
     }
@@ -116,13 +130,31 @@ const MobileCommissionAnalysis: React.FC = () => {
 
   const getYearlyChartData = () => {
     if (!yearlyData) return [];
-
     const filteredData = Object.entries(yearlyData)
       .filter(([key]) => key !== 'Total')
-      .map(([month, amount]) => ({
-        month: monthsInFrench[month as keyof typeof monthsInFrench] || month,
-        amount: amount as number
-      }))
+      .map(([month, data]) => {
+        const monthlyData = data as {
+          [key: string]: number;
+          elements_prescription: {
+            commission: number;
+            data_patients: Array<{
+              [key: string]: [string, number, string];
+            }>;
+          };
+          elements_realisation: {
+            commission: number;
+            data_patients: Array<{
+              [key: string]: [string, number, string];
+            }>;
+          };
+        };
+        return {
+          month: monthsInFrench[month as keyof typeof monthsInFrench] || month,
+          amount: monthlyData[month] || 0,
+          prescriptionCommission: monthlyData.elements_prescription.commission,
+          realizationCommission: monthlyData.elements_realisation.commission,
+        };
+      })
       .sort((a, b) => {
         const monthOrder = Object.values(monthsInFrench);
         return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
@@ -134,7 +166,6 @@ const MobileCommissionAnalysis: React.FC = () => {
         }
         return true;
       });
-
     return filteredData;
   };
 
@@ -144,7 +175,6 @@ const MobileCommissionAnalysis: React.FC = () => {
 
   const renderMonthlyAnalysis = () => {
     if (!monthlyData) return null;
-
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
@@ -154,7 +184,7 @@ const MobileCommissionAnalysis: React.FC = () => {
               <span className="text-xs font-medium bg-white/20 px-2 py-1 rounded">Patients</span>
             </div>
             <div className="text-2xl font-bold">{monthlyData.nb_total_patient}</div>
-            <div className="text-xs opacity-80">Total Patients</div>
+            <div className="text-xs opacity-80">Total des patients</div>
           </div>
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-4 text-white">
             <div className="flex items-center justify-between mb-2">
@@ -166,22 +196,22 @@ const MobileCommissionAnalysis: React.FC = () => {
           </div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Commission Breakdown</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition des commissions</h3>
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
-              <span className="text-sm text-gray-600">Prescription Amount</span>
+              <span className="text-sm text-gray-600">Montant des prescriptions</span>
               <span className="text-sm font-semibold text-gray-800">
                 {formatCurrency(monthlyData.montant_prescription)}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
-              <span className="text-sm text-gray-600">Realization Amount</span>
+              <span className="text-sm text-gray-600">Montant des réalisations</span>
               <span className="text-sm font-semibold text-gray-800">
                 {formatCurrency(monthlyData.montant_realisation)}
               </span>
             </div>
             <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-gray-600">Total Commissions</span>
+              <span className="text-sm text-gray-600">Total des commissions</span>
               <span className="text-sm font-semibold text-gray-800">
                 {monthlyData.nb_total_commission}
               </span>
@@ -195,7 +225,7 @@ const MobileCommissionAnalysis: React.FC = () => {
               className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
             >
               <span className="text-lg font-semibold text-gray-800">
-                Patient List ({monthlyData.list_patient_name.length})
+                Liste des patients ({monthlyData.list_patient_name.length})
               </span>
               {showPatientList ? (
                 <ChevronUp className="w-5 h-5 text-gray-500" />
@@ -228,6 +258,7 @@ const MobileCommissionAnalysis: React.FC = () => {
 
   const renderYearlyAnalysis = () => {
     if (!yearlyData) return null;
+
     const chartData = getYearlyChartData();
     const customTotal = calculateCustomTotal(chartData);
     const maxAmount = Math.max(...chartData.map(d => d.amount));
@@ -241,11 +272,13 @@ const MobileCommissionAnalysis: React.FC = () => {
               {selectedYear} Total
             </span>
           </div>
-          <div className="text-3xl font-bold mb-2">{formatCurrency(customTotal)}</div>
-          <div className="text-sm opacity-80">Annual Commission</div>
+          <div className="text-sm font-medium mb-2">Total</div>
+          <div className="text-3xl font-bold">{formatCurrency(customTotal)}</div>
+          <div className="text-sm opacity-80">Commission annuelle</div>
         </div>
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Breakdown</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Répartition mensuelle</h3>
           <div className="space-y-3">
             {chartData.map((data, index) => (
               <div key={index} className="flex items-center space-x-3">
@@ -258,7 +291,7 @@ const MobileCommissionAnalysis: React.FC = () => {
                       <div
                         className="h-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-500"
                         style={{
-                          width: maxAmount > 0 ? `${(data.amount / maxAmount) * 100}%` : '0%'
+                          width: maxAmount > 0 ? `${(data.amount / maxAmount) * 100}%` : '0%',
                         }}
                       />
                     </div>
@@ -271,16 +304,27 @@ const MobileCommissionAnalysis: React.FC = () => {
             ))}
           </div>
         </div>
+
         <div className="grid grid-cols-2 gap-2">
-          {chartData.filter(d => d.amount > 0).map((data, index) => (
-            <div
-              key={index}
-              className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 border border-gray-200"
-            >
-              <div className="text-xs font-medium text-gray-600 mb-1">{data.month}</div>
-              <div className="text-sm font-bold text-gray-800">{formatCurrency(data.amount)}</div>
-            </div>
-          ))}
+          {chartData
+            .filter(d => d.amount > 0)
+            .map((data, index) => (
+              <div
+                key={index}
+                className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 border border-gray-200"
+              >
+                <div className="text-xs font-medium text-gray-600 mb-1">{data.month}</div>
+                <div className="text-xs text-gray-500">
+                  Prescription: {formatCurrency(data.prescriptionCommission)}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Realization: {formatCurrency(data.realizationCommission)}
+                </div>
+                <div className="text-sm font-bold text-gray-800 mt-1">
+                  {formatCurrency(data.amount)}
+                </div>
+              </div>
+            ))}
         </div>
       </div>
     );
@@ -290,7 +334,7 @@ const MobileCommissionAnalysis: React.FC = () => {
     return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">
-          <h1 className="text-xl font-semibold text-slate-800">Commission Analysis</h1>
+          <h1 className="text-xl font-semibold text-slate-800">Analyse des commissions</h1>
           <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
           <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
         </div>
@@ -312,7 +356,7 @@ const MobileCommissionAnalysis: React.FC = () => {
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">
-        <h1 className="text-xl font-semibold text-slate-800">Commission Analysis</h1>
+        <h1 className="text-xl font-semibold text-slate-800">Analyse des commissions</h1>
         <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
         <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
       </div>
@@ -327,7 +371,7 @@ const MobileCommissionAnalysis: React.FC = () => {
             }`}
           >
             <Calendar className="w-4 h-4 inline mr-2" />
-            Monthly
+            Mensuel
           </button>
           <button
             onClick={() => setAnalysisType('yearly')}
@@ -338,14 +382,14 @@ const MobileCommissionAnalysis: React.FC = () => {
             }`}
           >
             <BarChart3 className="w-4 h-4 inline mr-2" />
-            Yearly
+            Annuel
           </button>
         </div>
         <div className="grid grid-cols-1 gap-4">
           {analysisType === 'monthly' && (
             <div className="flex flex-row items-center space-x-2 w-full">
               <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                Month
+                Mois
               </label>
               <select
                 value={selectedMonth}
@@ -368,7 +412,7 @@ const MobileCommissionAnalysis: React.FC = () => {
           )}
           {analysisType === 'yearly' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Année</label>
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
@@ -392,7 +436,7 @@ const MobileCommissionAnalysis: React.FC = () => {
             }`}
           >
             <FileText className="w-4 h-4 inline mr-2" />
-            Invoiced
+            Facturé
           </button>
           {!(analysisType === 'monthly' && selectedMonth <= 4) && (
             <button
@@ -404,7 +448,7 @@ const MobileCommissionAnalysis: React.FC = () => {
               }`}
             >
               <FileText className="w-4 h-4 inline mr-2" />
-              Not Invoiced
+              Non facturé
             </button>
           )}
         </div>

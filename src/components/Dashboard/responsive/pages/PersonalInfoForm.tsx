@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import axiosInstance from '../../../../api/axioConfig';
 
 interface PersonalInfo {
@@ -45,7 +45,6 @@ const PersonalInfoForm: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-
   const [formData, setFormData] = useState<PersonalInfo>({
     firstName: '',
     lastName: '',
@@ -55,7 +54,6 @@ const PersonalInfoForm: React.FC = () => {
     nationality: '',
     cni: '',
   });
-
   const [doctorData, setDoctorData] = useState<DoctorInfo>({
     doctorNO: '',
     speciality: '',
@@ -71,7 +69,7 @@ const PersonalInfoForm: React.FC = () => {
       const userData = JSON.parse(localStorage.getItem('userData') || '{}');
       return userData.doctor_id || userData.id || userData.user_id;
     } catch (error) {
-      console.error('Error getting doctor ID:', error);
+      console.error('Erreur lors de la récupération de l\'ID du médecin :', error);
       return null;
     }
   };
@@ -80,7 +78,7 @@ const PersonalInfoForm: React.FC = () => {
     const fetchDoctorInfo = async () => {
       const doctorId = getDoctorId();
       if (!doctorId) {
-        setError('Doctor ID not found');
+        setError('ID du médecin non trouvé');
         setIsLoading(false);
         return;
       }
@@ -117,8 +115,8 @@ const PersonalInfoForm: React.FC = () => {
           doctorPhone2: doctorData.DoctorPhone2 || '',
         });
       } catch (error) {
-        console.error('Error fetching doctor information:', error);
-        setError('Failed to load doctor information');
+        console.error('Erreur lors de la récupération des informations du médecin :', error);
+        setError('Échec du chargement des informations du médecin');
       } finally {
         setIsLoading(false);
       }
@@ -165,7 +163,7 @@ const PersonalInfoForm: React.FC = () => {
   const handleSave = async () => {
     const doctorId = getDoctorId();
     if (!doctorId) {
-      setError('Doctor ID not found');
+      setError('ID du médecin non trouvé');
       return;
     }
     try {
@@ -188,8 +186,8 @@ const PersonalInfoForm: React.FC = () => {
       await axiosInstance.put(`/doctors/update/${doctorId}`, updateData);
       setShowSuccessModal(true);
     } catch (error) {
-      console.error('Error updating doctor information:', error);
-      setError('Failed to update doctor information');
+      console.error('Erreur lors de la mise à jour des informations du médecin :', error);
+      setError('Échec de la mise à jour des informations du médecin');
     } finally {
       setIsSaving(false);
     }
@@ -202,7 +200,7 @@ const PersonalInfoForm: React.FC = () => {
           <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
             <div className="flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              <span className="text-sm">Loading doctor information...</span>
+              <span className="text-sm">Chargement des informations du médecin...</span>
             </div>
           </div>
         )}
@@ -213,10 +211,10 @@ const PersonalInfoForm: React.FC = () => {
         )}
         {showSuccessModal && (
           <div className="fixed top-30 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded shadow-lg">
-            Doctor information updated successfully!
+            Informations du médecin mises à jour avec succès !
           </div>
         )}
-        {/* Step Indicator */}
+        {/* Indicateur d'Étape */}
         <div className="flex justify-center mb-8">
           <div className="flex items-center space-x-4">
             {[1, 2].map((step) => (
@@ -235,9 +233,9 @@ const PersonalInfoForm: React.FC = () => {
             ))}
           </div>
         </div>
-        {/* Form Card with Color Patterns */}
+        {/* Carte de Formulaire avec Motifs Colorés */}
         <div className="bg-white rounded-lg shadow-xl border border-gray-100 p-8 relative overflow-hidden">
-          {/* Colorful Pattern Elements inside the container */}
+          {/* Éléments de Motifs Colorés à l'intérieur du conteneur */}
           <div className="absolute inset-0 overflow-hidden">
             <div className="absolute top-4 left-4 w-16 h-16 bg-gradient-to-br from-blue-200 to-blue-300 rounded-full opacity-20"></div>
             <div className="absolute top-8 right-8 w-12 h-12 bg-gradient-to-br from-red-200 to-red-300 rounded-full opacity-25"></div>
@@ -245,52 +243,52 @@ const PersonalInfoForm: React.FC = () => {
             <div className="absolute bottom-4 right-4 w-14 h-14 bg-gradient-to-br from-green-200 to-green-300 rounded-full opacity-25"></div>
             <div className="absolute top-1/2 left-1/4 w-8 h-8 bg-gradient-to-br from-purple-200 to-purple-300 rounded-full opacity-30"></div>
             <div className="absolute top-1/3 right-1/3 w-10 h-10 bg-gradient-to-br from-pink-200 to-pink-300 rounded-full opacity-25"></div>
-            {/* Geometric Shapes */}
+            {/* Formes Géométriques */}
             <div className="absolute top-16 left-1/2 w-6 h-6 bg-gradient-to-br from-blue-300 to-blue-400 opacity-20 transform rotate-45"></div>
             <div className="absolute bottom-16 right-1/4 w-8 h-8 bg-gradient-to-br from-red-300 to-red-400 opacity-20 transform rotate-12"></div>
             <div className="absolute top-3/4 left-1/3 w-7 h-7 bg-gradient-to-br from-yellow-300 to-yellow-400 opacity-25 rounded-lg transform rotate-45"></div>
-            {/* Subtle Pattern Overlay */}
+            {/* Superposition de Motifs Subtiles */}
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-50/30 via-transparent to-red-50/30"></div>
           </div>
           <div className="relative z-10">
             <div className="flex items-center mb-8">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mr-3 shadow-md"></div>
               <h2 className="text-2xl font-semibold text-gray-900">
-                {currentStep === 1 ? 'Personal Information' : 'Doctor Information'}
+                {currentStep === 1 ? 'Informations Personnelles' : 'Informations du Médecin'}
               </h2>
             </div>
             {currentStep === 1 ? (
               <div className="space-y-6">
-                {/* First Name & Last Name */}
+                {/* Prénom et Nom */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      First Name
+                      Prénom
                     </label>
                     <input
                       type="text"
                       value={formData.firstName}
                       onChange={(e) => handleInputChange('firstName', e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                      placeholder="Enter your first name"
+                      placeholder="Entrez votre prénom"
                       disabled={isLoading}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Last Name
+                      Nom
                     </label>
                     <input
                       type="text"
                       value={formData.lastName}
                       onChange={(e) => handleInputChange('lastName', e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                      placeholder="Enter your last name"
+                      placeholder="Entrez votre nom"
                       disabled={isLoading}
                     />
                   </div>
                 </div>
-                {/* Email & Date of Birth */}
+                {/* Email et Date de Naissance */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -301,49 +299,49 @@ const PersonalInfoForm: React.FC = () => {
                       value={formData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                      placeholder="Enter your email"
+                      placeholder="Entrez votre email"
                       disabled={isLoading}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date of Birth
+                      Date de Naissance
                     </label>
                     <input
                       type="date"
                       value={formData.dateOfBirth}
                       onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                      placeholder="mm/dd/yyyy"
+                      placeholder="jj/mm/aaaa"
                       disabled={isLoading}
                     />
                   </div>
                 </div>
-                {/* Place of Birth & Nationality */}
+                {/* Lieu de Naissance et Nationalité */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Place of Birth
+                      Lieu de Naissance
                     </label>
                     <input
                       type="text"
                       value={formData.placeOfBirth}
                       onChange={(e) => handleInputChange('placeOfBirth', e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                      placeholder="Enter your place of birth"
+                      placeholder="Entrez votre lieu de naissance"
                       disabled={isLoading}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nationality
+                      Nationalité
                     </label>
                     <input
                       type="text"
                       value={formData.nationality}
                       onChange={(e) => handleInputChange('nationality', e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                      placeholder="Enter your nationality"
+                      placeholder="Entrez votre nationalité"
                       disabled={isLoading}
                     />
                   </div>
@@ -358,123 +356,117 @@ const PersonalInfoForm: React.FC = () => {
                     value={formData.cni}
                     onChange={(e) => handleInputChange('cni', e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                    placeholder="Enter your CNI number"
+                    placeholder="Entrez votre numéro de CNI"
                     disabled={isLoading}
                   />
                 </div>
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Doctor Information Fields */}
+                {/* Champs d'Informations du Médecin */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Doctor Number
+                    Numéro de Médecin
                   </label>
                   <input
                     type="text"
                     value={doctorData.doctorNO}
                     onChange={(e) => handleInputChange('doctorNO', e.target.value, true)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                    placeholder="Enter your doctor number"
+                    placeholder="Entrez votre numéro de médecin"
                     disabled={isLoading}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Speciality
+                    Spécialité
                   </label>
                   <input
                     type="text"
                     value={doctorData.speciality}
                     onChange={(e) => handleInputChange('speciality', e.target.value, true)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                    placeholder="Enter your speciality"
+                    placeholder="Entrez votre spécialité"
                     disabled={isLoading}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Doctor Federation ID
+                    ID de Fédération du Médecin
                   </label>
                   <input
                     type="text"
                     value={doctorData.doctorFederationID}
                     onChange={(e) => handleInputChange('doctorFederationID', e.target.value, true)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                    placeholder="Enter your doctor federation ID"
+                    placeholder="Entrez votre ID de fédération du médecin"
                     disabled={isLoading}
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Doctor Phone
+                      Téléphone du Médecin
                     </label>
                     <input
                       type="text"
                       value={doctorData.doctorPhone}
                       onChange={(e) => handleInputChange('doctorPhone', e.target.value, true)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                      placeholder="Enter your phone number"
+                      placeholder="Entrez votre numéro de téléphone"
                       disabled={isLoading}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Doctor Phone 2
+                      Téléphone du Médecin 2
                     </label>
                     <input
                       type="text"
                       value={doctorData.doctorPhone2}
                       onChange={(e) => handleInputChange('doctorPhone2', e.target.value, true)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                      placeholder="Enter your secondary phone number"
+                      placeholder="Entrez votre second numéro de téléphone"
                       disabled={isLoading}
                     />
                   </div>
                 </div>
               </div>
             )}
-            {/* Navigation Buttons */}
+            {/* Boutons de Navigation */}
             <div className="flex justify-between mt-8">
               <button
                 onClick={handlePrevious}
                 disabled={currentStep === 1 || isLoading}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors !rounded-button"
+                className="p-3 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Previous
+                <ChevronLeft className="w-5 h-5" />
               </button>
               {currentStep < totalSteps ? (
                 <button
                   onClick={handleNext}
                   disabled={isLoading}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all !rounded-button shadow-lg"
+                  className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
                 >
-                  Next
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               ) : (
                 <button
                   onClick={handleSave}
                   disabled={isSaving || isLoading}
-                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all !rounded-button shadow-lg flex items-center gap-2"
+                  className="p-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center"
                 >
                   {isSaving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Save
-                    </>
+                    <Save className="w-5 h-5" />
                   )}
                 </button>
               )}
             </div>
           </div>
         </div>
-        {/* Bottom Indicator */}
+        {/* Indicateur du Bas */}
         <div className="flex justify-center mt-6">
           <div className="flex space-x-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>

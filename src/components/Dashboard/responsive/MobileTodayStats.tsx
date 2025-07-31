@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Wallet, Eye, EyeOff, Users, User } from 'lucide-react';
 import axiosInstance from "../../../api/axioConfig";
 
-// Define the props for the CircularProgress component
+// Définir les props pour le composant CircularProgress
 interface CircularProgressProps {
   percentage: number;
   icon: React.ComponentType<{ className?: string }>;
@@ -35,7 +35,7 @@ const CircularProgress: React.FC<CircularProgressProps> = ({ percentage, icon: I
   );
 };
 
-// Define the type for the stats state
+// Définir le type pour l'état des statistiques
 interface Stats {
   commission: {
     amount: number;
@@ -63,45 +63,44 @@ const MobileTodayStats: React.FC = () => {
   });
   const [loading, setLoading] = useState<boolean>(true);
 
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const userDataString = localStorage.getItem('userData');
-      const userData = userDataString ? JSON.parse(userDataString) : null;
-      const doctorId = userData?.doctor_id || '65';
-      const response = await axiosInstance.get(`gnu_doctor/${doctorId}/research/`);
-      const data = response.data;
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const userDataString = localStorage.getItem('userData');
+        const userData = userDataString ? JSON.parse(userDataString) : null;
+        const doctorId = userData?.doctor_id || '65';
+        const response = await axiosInstance.get(`gnu_doctor/${doctorId}/research/`);
+        const data = response.data;
 
-      // Use type assertion to tell TypeScript that the keys are strings
-      const uniquePatients = [...new Set(
-        data.Data.data_patients.map((patientData: { [key: string]: unknown }) =>
-          Object.keys(patientData)[0]
-        )
-      )] as string[];
+        // Utiliser l'assertion de type pour indiquer à TypeScript que les clés sont des chaînes
+        const uniquePatients = [...new Set(
+          data.Data.data_patients.map((patientData: { [key: string]: unknown }) =>
+            Object.keys(patientData)[0]
+          )
+        )] as string[];
 
-      const patientsPercentage = (uniquePatients.length / 100) * 100;
+        const patientsPercentage = (uniquePatients.length / 100) * 100;
 
-      setStats({
-        commission: {
-          amount: data.Data.commission,
-          count: data.number,
-        },
-        patients: {
-          total: uniquePatients.length,
-          percentage: patientsPercentage,
-        },
-        patientNames: uniquePatients.slice(0, 3),
-      });
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        setStats({
+          commission: {
+            amount: data.Data.commission,
+            count: data.number,
+          },
+          patients: {
+            total: uniquePatients.length,
+            percentage: patientsPercentage,
+          },
+          patientNames: uniquePatients.slice(0, 3),
+        });
+      } catch (error) {
+        console.error('Erreur lors de la récupération des données :', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchData();
-}, []);
-
+    fetchData();
+  }, []);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -115,13 +114,12 @@ useEffect(() => {
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-4">
-        {/* Loading state JSX */}
+        {/* État de chargement JSX */}
         <div className="bg-gradient-to-br from-gray-50 to-slate-100 border border-gray-200 rounded-lg p-4 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 left-0 w-20 h-20 bg-gray-100 opacity-30 rounded-full -translate-y-10 -translate-x-10"></div>
           <div className="absolute bottom-0 right-0 w-24 h-24 bg-slate-200 opacity-20 rounded-full translate-y-12 translate-x-12"></div>
-          <div className="absolute top-1/2 right-1/4 w-6 h-6 bg-gray-200 opacity-40 rounded-full"></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <span className="text-gray-700 font-bold">Today's Commissions</span>
+            <span className="text-gray-700 font-bold">Commissions d'aujourd'hui</span>
           </div>
           <div className="flex items-center mb-4 relative z-10">
             <Wallet className="w-6 h-6 text-slate-600 mr-4" />
@@ -140,12 +138,12 @@ useEffect(() => {
             </div>
           </div>
         </div>
-        {/* Additional loading containers */}
+        {/* Conteneurs de chargement supplémentaires */}
         <div className="bg-gradient-to-br from-purple-50 to-indigo-100 border border-purple-100 rounded-lg p-4 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-16 bg-purple-200 opacity-20 rounded-full -translate-y-8 translate-x-16 rotate-45"></div>
           <div className="absolute bottom-0 left-0 w-20 h-20 bg-indigo-200 opacity-15 rounded-full translate-y-10 -translate-x-10"></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <span className="text-gray-700 font-bold">Today's Registered Patients</span>
+            <span className="text-gray-700 font-bold">Patients enregistrés aujourd'hui</span>
           </div>
           <div className="flex items-center ml-20 relative z-10">
             <div className="relative w-16 h-16">
@@ -169,7 +167,7 @@ useEffect(() => {
         </div>
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-4 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <span className="text-gray-700 font-bold">Today's Patient Names</span>
+            <span className="text-gray-700 font-bold">Noms des patients d'aujourd'hui</span>
           </div>
           <hr className="mb-4 border-blue-200 relative z-10" />
           <div className="text-sm text-gray-600 relative z-10">
@@ -190,12 +188,12 @@ useEffect(() => {
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      {/* Today's Commissions Container */}
+      {/* Conteneur des commissions d'aujourd'hui */}
       <div className="bg-gradient-to-br from-gray-50 to-slate-100 border border-gray-200 rounded-lg p-4 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 left-0 w-20 h-20 bg-gray-100 opacity-30 rounded-full -translate-y-10 -translate-x-10"></div>
         <div className="absolute bottom-0 right-0 w-24 h-24 bg-slate-200 opacity-20 rounded-full translate-y-12 translate-x-12"></div>
         <div className="flex items-center justify-between mb-2 relative z-10">
-          <span className="text-gray-700 font-bold">Today's Commissions</span>
+          <span className="text-gray-700 font-bold">Commissions d'aujourd'hui</span>
         </div>
         <div className="flex items-center mb-1 ml-1 relative z-10">
           <Wallet className="w-6 h-6 text-slate-600 mr-4" />
@@ -211,12 +209,12 @@ useEffect(() => {
           <span>{stats.commission.count} commissions</span>
         </div>
       </div>
-      {/* Today's Registered Patients Container */}
+      {/* Conteneur des patients enregistrés aujourd'hui */}
       <div className="bg-gradient-to-br from-purple-50 to-indigo-100 border border-purple-100 rounded-lg p-4 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-16 bg-purple-200 opacity-20 rounded-full -translate-y-8 translate-x-16 rotate-45"></div>
         <div className="absolute bottom-0 left-0 w-20 h-20 bg-indigo-200 opacity-15 rounded-full translate-y-10 -translate-x-10"></div>
         <div className="flex items-center justify-between mb-2 relative z-10">
-          <span className="text-gray-700 font-bold">Today's Registered Patients</span>
+          <span className="text-gray-700 font-bold">Patients enregistrés aujourd'hui</span>
         </div>
         <div className="flex items-center ml-20 relative z-10">
           <CircularProgress percentage={stats.patients.percentage} icon={Users} />
@@ -226,10 +224,10 @@ useEffect(() => {
           </div>
         </div>
       </div>
-      {/* Patient Names Container */}
+      {/* Conteneur des noms des patients */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-4 shadow-sm relative overflow-hidden">
         <div className="flex items-center justify-between mb-2 relative z-10">
-          <span className="text-gray-700 font-bold">Today's Patient Names</span>
+          <span className="text-gray-700 font-bold">Noms des patients d'aujourd'hui</span>
         </div>
         <hr className="mb-4 border-blue-200 relative z-10" />
         <div className="text-sm text-gray-600 relative z-10">

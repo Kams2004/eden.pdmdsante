@@ -3,7 +3,7 @@ import { Send, AlertCircle, Clock, CheckCircle, XCircle, Search, MessageSquare, 
 import axiosInstance from '../../../../api/axioConfig';
 import { useToast } from '../../../../hooks/useToast';
 
-// Define interfaces
+// Définir les interfaces
 interface Commission {
   id: string;
   type: string;
@@ -31,23 +31,23 @@ interface UserData {
 const predefinedCommissions: PredefinedCommission[] = [
   {
     id: 'commission-mismatch',
-    title: 'Commission Mismatch',
-    description: 'Report a discrepancy between displayed and received commissions'
+    title: 'Inadéquation de Commission',
+    description: 'Signaler une divergence entre les commissions affichées et reçues'
   },
   {
     id: 'commission-delay',
-    title: 'Commission Delay',
-    description: 'Report delays in commission payments'
+    title: 'Retard de Commission',
+    description: 'Signaler des retards dans les paiements de commissions'
   },
   {
     id: 'commission-error',
-    title: 'Commission Error',
-    description: 'Report errors in commission calculations'
+    title: 'Erreur de Commission',
+    description: 'Signaler des erreurs dans les calculs de commissions'
   },
   {
     id: 'commission-query',
-    title: 'Commission Query',
-    description: 'Query regarding commission structure or details'
+    title: 'Demande de Commission',
+    description: 'Demande concernant la structure ou les détails de la commission'
   }
 ];
 
@@ -71,9 +71,9 @@ const MobileRequestView: React.FC = () => {
         const response = await axiosInstance.get<Commission[]>(`/requete/get_requests/${userId}`);
         const commissions: Commission[] = response.data.map((req: any) => ({
           id: String(req.id),
-          type: req.commission ? 'Commission Mismatch' :
-                req.revendication_examen ? 'Patient Record Issue' :
-                req.error ? 'System Error' : 'Payment Delay',
+          type: req.commission ? 'Inadéquation de Commission' :
+                req.revendication_examen ? 'Problème de Dossier Patient' :
+                req.error ? 'Erreur Système' : 'Retard de Paiement',
           description: req.message,
           urgency: 'low',
           status: req.valide ? 'approved' : 'pending',
@@ -84,7 +84,7 @@ const MobileRequestView: React.FC = () => {
         setSentCommissions(commissions);
       }
     } catch (error) {
-      console.error('Error fetching user commissions:', error);
+      console.error('Erreur lors de la récupération des commissions de l\'utilisateur :', error);
     } finally {
       setLoading(false);
     }
@@ -119,14 +119,14 @@ const MobileRequestView: React.FC = () => {
     };
     try {
       await axiosInstance.post('/requete/add', requestData);
-      showSuccessToast('Commission sent successfully');
+      showSuccessToast('Demande de commission envoyée avec succès');
       await fetchUserCommissions();
       setSelectedCommission('');
       setCustomMessage('');
       setUrgency('low');
     } catch (error) {
-      console.error('Error sending commission:', error);
-      showErrorToast('Failed to send commission');
+      console.error('Erreur lors de l\'envoi de la commission :', error);
+      showErrorToast('Échec de l\'envoi de la commission');
     } finally {
       setLoading(false);
     }
@@ -148,14 +148,13 @@ const MobileRequestView: React.FC = () => {
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        {/* Header */}
+        {/* En-tête */}
         <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4">
-          <h1 className="text-xl font-semibold text-black">Submit Commission Request</h1>
+          <h1 className="text-xl font-semibold text-black">Soumettre une Demande de Commission</h1>
           <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
           <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
         </div>
-
-        {/* Loading for new commission form */}
+        {/* Chargement du formulaire de nouvelle commission */}
         <div className="px-4 sm:px-6 py-4 bg-blue-50/30 border-b border-blue-200">
           <div className="space-y-4">
             <div className="space-y-3">
@@ -188,8 +187,7 @@ const MobileRequestView: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Loading for sent commissions list */}
+        {/* Chargement de la liste des commissions envoyées */}
         <div className="px-4 sm:px-6 py-4 border-t border-blue-200">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -231,7 +229,7 @@ const MobileRequestView: React.FC = () => {
               </div>
             ))}
           </div>
-          {/* Loading for pagination */}
+          {/* Chargement de la pagination */}
           <div className="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50">
             <div className="flex items-center justify-between">
               <div className="h-8 w-24 bg-slate-200 rounded-lg"></div>
@@ -246,14 +244,13 @@ const MobileRequestView: React.FC = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      {/* Header */}
+      {/* En-tête */}
       <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4">
-        <h1 className="text-xl font-semibold text-black">Submit Commission Request</h1>
+        <h1 className="text-xl font-semibold text-black">Soumettre une Demande de Commission</h1>
         <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
         <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
       </div>
-
-      {/* New Commission Form */}
+      {/* Formulaire de Nouvelle Commission */}
       <div className="px-4 sm:px-6 py-4 bg-blue-50/30 border-b border-blue-200">
         <div className="space-y-4">
           <div className="space-y-3">
@@ -284,7 +281,7 @@ const MobileRequestView: React.FC = () => {
             ))}
           </div>
           <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
-            <label className="block text-sm font-semibold text-blue-800 mb-2">Urgency Level</label>
+            <label className="block text-sm font-semibold text-blue-800 mb-2">Niveau d'Urgence</label>
             <div className="flex gap-2">
               {['low', 'medium', 'high'].map((level: string) => (
                 <button
@@ -297,19 +294,19 @@ const MobileRequestView: React.FC = () => {
                   }`}
                   onClick={() => setUrgency(level)}
                 >
-                  {level}
+                  {level === 'low' ? 'Faible' : level === 'medium' ? 'Moyen' : 'Élevé'}
                 </button>
               ))}
             </div>
           </div>
           <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
-            <label className="block text-sm font-semibold text-blue-800 mb-2">Additional Details</label>
+            <label className="block text-sm font-semibold text-blue-800 mb-2">Détails Supplémentaires</label>
             <textarea
               value={customMessage}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomMessage(e.target.value)}
               rows={4}
               className="w-full px-3 py-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white hover:border-slate-400 transition-colors"
-              placeholder="Please provide any additional information about your commission request..."
+              placeholder="Veuillez fournir toute information supplémentaire concernant votre demande de commission..."
             ></textarea>
           </div>
           <div className="flex justify-end">
@@ -325,24 +322,23 @@ const MobileRequestView: React.FC = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Sending...
+                  Envoi en cours...
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4 mr-2" />
-                  Send Request
+                  Envoyer la Demande
                 </>
               )}
             </button>
           </div>
         </div>
       </div>
-
-      {/* Sent Commissions List */}
+      {/* Liste des Commissions Envoyées */}
       <div className="px-4 sm:px-6 py-4 border-t border-blue-200">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h2 className="text-xl font-semibold text-blue-800">Sent Commissions</h2>
+            <h2 className="text-xl font-semibold text-blue-800">Commissions Envoyées</h2>
             <div className="w-8 h-1 bg-blue-400 mt-1 rounded-full"></div>
           </div>
         </div>
@@ -350,7 +346,7 @@ const MobileRequestView: React.FC = () => {
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder="Search commissions..."
+              placeholder="Rechercher des commissions..."
               value={searchTerm}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 w-full bg-white hover:border-slate-400 transition-colors"
@@ -362,10 +358,10 @@ const MobileRequestView: React.FC = () => {
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
             className="px-4 py-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white hover:border-slate-400 transition-colors"
           >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="all">Tous les Statuts</option>
+            <option value="pending">En Attente</option>
+            <option value="approved">Approuvé</option>
+            <option value="rejected">Rejeté</option>
           </select>
         </div>
         <div className="space-y-4">
@@ -390,7 +386,7 @@ const MobileRequestView: React.FC = () => {
                     commission.urgency === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                     'bg-green-100 text-green-800'
                   }`}>
-                    {commission.urgency}
+                    {commission.urgency === 'high' ? 'Élevé' : commission.urgency === 'medium' ? 'Moyen' : 'Faible'}
                   </span>
                 </div>
               </div>
@@ -402,8 +398,8 @@ const MobileRequestView: React.FC = () => {
                 </div>
               )}
               <div className="flex justify-between items-center pt-3 border-t border-blue-200 relative z-10">
-                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Created: {commission.createdAt}</span>
-                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Updated: {commission.updatedAt}</span>
+                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Créé: {commission.createdAt}</span>
+                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Mis à jour: {commission.updatedAt}</span>
               </div>
             </div>
           ))}
@@ -417,17 +413,17 @@ const MobileRequestView: React.FC = () => {
               className="flex items-center px-3 py-2 text-sm text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
-              <span>Previous</span>
+              <span>Précédent</span>
             </button>
             <span className="text-sm text-black font-bold">
-              Page {currentPage} of {Math.ceil(filteredCommissions.length / itemsPerPage)}
+              Page {currentPage} sur {Math.ceil(filteredCommissions.length / itemsPerPage)}
             </span>
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredCommissions.length / itemsPerPage)))}
               disabled={currentPage === Math.ceil(filteredCommissions.length / itemsPerPage)}
               className="flex items-center px-3 py-2 text-sm text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>Next</span>
+              <span>Suivant</span>
               <ChevronRight className="w-4 h-4 ml-1" />
             </button>
           </div>

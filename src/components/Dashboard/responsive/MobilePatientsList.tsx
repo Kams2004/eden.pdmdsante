@@ -17,6 +17,7 @@ const MobilePatientsList: React.FC<MobilePatientsListProps> = ({ onDetailsClick 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
   const patientsPerPage = 9;
 
   useEffect(() => {
@@ -24,24 +25,21 @@ const MobilePatientsList: React.FC<MobilePatientsListProps> = ({ onDetailsClick 
       try {
         const userData = localStorage.getItem('userData');
         if (!userData) {
-          console.error('No user data found in localStorage');
+          console.error('Aucune donnée utilisateur trouvée dans localStorage');
           return;
         }
-
         const { doctor_id } = JSON.parse(userData);
         const response = await axiosInstance.get(`gnu_doctor/${doctor_id}/exams-patients`);
         const { data_patients } = response.data;
-
         const uniquePatientNames = Array.from(new Set(data_patients.map((patientData: any) => Object.keys(patientData)[0]))) as string[];
         const uniquePatients = uniquePatientNames.map((name, index) => ({
           id: index + 1,
           name,
           checked: false
         }));
-
         setPatients(uniquePatients);
       } catch (error) {
-        console.error('Error fetching patients data:', error);
+        console.error('Erreur lors de la récupération des données des patients :', error);
       } finally {
         setLoading(false);
       }
@@ -57,7 +55,6 @@ const MobilePatientsList: React.FC<MobilePatientsListProps> = ({ onDetailsClick 
   const indexOfLastPatient = currentPage * patientsPerPage;
   const indexOfFirstPatient = indexOfLastPatient - patientsPerPage;
   const currentPatients = filteredPatients.slice(indexOfFirstPatient, indexOfLastPatient);
-
   const totalPages = Math.ceil(filteredPatients.length / patientsPerPage);
 
   const handleSelectPatient = (id: number) => {
@@ -69,7 +66,7 @@ const MobilePatientsList: React.FC<MobilePatientsListProps> = ({ onDetailsClick 
   const handleDetailsClick = () => {
     const selectedPatients = patients.filter(patient => patient.checked).map(patient => patient.name);
     if (selectedPatients.length === 0) {
-      alert('Please select at least one patient to view details');
+      alert('Veuillez sélectionner au moins un patient pour voir les détails');
       return;
     }
     onDetailsClick(selectedPatients);
@@ -82,14 +79,13 @@ const MobilePatientsList: React.FC<MobilePatientsListProps> = ({ onDetailsClick 
       <div className="absolute top-0 left-0 w-20 h-20 bg-gray-100 opacity-30 rounded-full -translate-y-10 -translate-x-10"></div>
       <div className="absolute bottom-0 right-0 w-24 h-24 bg-slate-200 opacity-20 rounded-full translate-y-12 translate-x-12"></div>
       <div className="absolute top-1/2 right-1/4 w-6 h-6 bg-gray-200 opacity-40 rounded-full"></div>
+      <h3 className="text-gray-900 font-medium mb-4 relative z-10">Liste des patients</h3>
 
-      <h3 className="text-gray-900 font-medium mb-4 relative z-10">Patients List</h3>
-      
       <div className="flex flex-row gap-2 mb-4 relative z-10 items-center">
         <div className="flex-1 relative max-w-xs">
           <input
             type="text"
-            placeholder="Search patients..."
+            placeholder="Rechercher des patients..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -98,11 +94,10 @@ const MobilePatientsList: React.FC<MobilePatientsListProps> = ({ onDetailsClick 
             <i className="ri-search-line text-gray-400"></i>
           </div>
         </div>
-
-        <button 
+        <button
           onClick={handleDetailsClick}
           className="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors relative"
-          title={`View details for ${selectedCount} selected patient(s)`}
+          title={`Voir les détails pour ${selectedCount} patient(s) sélectionné(s)`}
         >
           <Eye size={18} />
           {selectedCount > 0 && (
@@ -111,8 +106,6 @@ const MobilePatientsList: React.FC<MobilePatientsListProps> = ({ onDetailsClick 
             </span>
           )}
         </button>
-
-
       </div>
 
       {loading ? (
@@ -146,9 +139,7 @@ const MobilePatientsList: React.FC<MobilePatientsListProps> = ({ onDetailsClick 
         >
           <i className="ri-arrow-left-line text-gray-600"></i>
         </button>
-
-        <span className="text-sm text-gray-600">Page {currentPage} of {totalPages}</span>
-
+        <span className="text-sm text-gray-600">Page {currentPage} sur {totalPages}</span>
         <button
           onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
           disabled={currentPage === totalPages}
@@ -161,10 +152,10 @@ const MobilePatientsList: React.FC<MobilePatientsListProps> = ({ onDetailsClick 
       {selectedCount > 0 && (
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg relative z-10">
           <p className="text-sm text-blue-700 font-medium">
-            {selectedCount} patient{selectedCount > 1 ? 's' : ''} selected
+            {selectedCount} patient{selectedCount > 1 ? 's' : ''} sélectionné(s)
           </p>
           <p className="text-xs text-blue-600">
-            Click the eye icon to view details
+            Cliquez sur l'icône de l'œil pour voir les détails
           </p>
         </div>
       )}

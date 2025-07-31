@@ -1,33 +1,39 @@
-import { useState, useEffect } from "react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { Filter, RefreshCcw, ChevronLeft, ChevronRight, Printer } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Filter, RefreshCw, Printer, Calendar, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import axiosInstance from "../../api/axioConfig";
 
 interface Patient {
   id: string;
   name: string;
   examination: string;
-  commission: number;
-  transferDate: Date;
-  selected?: boolean;
+  commission: string;
+  transferDate: string;
+  selected: boolean;
 }
 
 interface PatientsViewProps {
-  selectedPatients: string[];
+  selectedPatients?: string[];
 }
 
-const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients = [] }) => {
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [selectAll, setSelectAll] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
-  const [selectAll, setSelectAll] = useState(false);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [originalPatients, setOriginalPatients] = useState<Patient[]>([]);
-  const [isReset, setIsReset] = useState<boolean>(false);
-  const itemsPerPage = 6; // Set to 6 elements per page
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Enhanced filtering states
+  const [invoiceStatus, setInvoiceStatus] = useState<'invoiced' | 'Notinvoiced'>('invoiced');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<'prescription' | 'realisation'>('prescription');
+  const [showFilters, setShowFilters] = useState(false);
+  const [monthlyData, setMonthlyData] = useState<any>(null);
+
+  const patientsPerPage = 6;
+  const currentYear = new Date().getFullYear();
 
   const fetchPatientsData = async () => {
     try {
@@ -37,24 +43,24 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
         console.error('No user data found in localStorage');
         return;
       }
+
       const { doctor_id } = JSON.parse(userData);
-      const response = await axiosInstance.get(`gnu_doctor/${doctor_id}/exams-patients`);
-      const { data_patients } = response.data;
-      const formattedPatients = data_patients.map((patientData: any, index: number) => {
-        const patientName = Object.keys(patientData)[0];
-        const [examination, patientCommission, transferDate] = patientData[patientName];
-        return {
-          id: `P${index + 1}`,
-          name: patientName,
-          examination,
-          commission: parseFloat(patientCommission),
-          transferDate: new Date(transferDate),
-          selected: isReset ? false : selectedPatients.includes(patientName),
-        };
-      });
-      setOriginalPatients(formattedPatients);
-      setPatients(formattedPatients);
-      setFilteredPatients(formattedPatients);
+
+      // Fetch data based on invoice status
+      const response = await axiosInstance.get(`/doctor_com/invoiced_by_year/${doctor_id}/${currentYear}/${invoiceStatus}`);
+      setMonthlyData(response.data);
+
+      // If no month is selected, select the first available month with data
+      if (!selectedMonth) {
+        const monthsWithData = Object.keys(response.data).filter(month =>
+          month !== 'Total' &&
+          (response.data[month]?.elements_prescription?.data_patients?.length > 0 ||
+           response.data[month]?.elements_realisation?.data_patients?.length > 0)
+        );
+        if (monthsWithData.length > 0) {
+          setSelectedMonth(monthsWithData[0]);
+        }
+      }
     } catch (error) {
       console.error('Error fetching patients data:', error);
     } finally {
@@ -62,77 +68,103 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
     }
   };
 
+  const processPatientData = () => {
+    if (!monthlyData || !selectedMonth || !monthlyData[selectedMonth]) {
+      setPatients([]);
+      setFilteredPatients([]);
+      return;
+    }
+
+    const monthData = monthlyData[selectedMonth];
+    const typeData = selectedType === 'prescription' ?
+      monthData.elements_prescription :
+      monthData.elements_realisation;
+
+    if (!typeData?.data_patients) {
+      setPatients([]);
+      setFilteredPatients([]);
+      return;
+    }
+
+    const formattedPatients = typeData.data_patients.map((patientData: any, index: number) => {
+      const patientName = Object.keys(patientData)[0];
+      const [examination, patientCommission, transferDate] = patientData[patientName];
+
+      return {
+        id: `P${index + 1}`,
+        name: patientName,
+        examination,
+        commission: `${patientCommission} FCFA`,
+        transferDate: new Date(transferDate).toLocaleDateString(),
+        selected: selectedPatients.includes(patientName),
+      };
+    });
+
+    setPatients(formattedPatients);
+    setFilteredPatients(formattedPatients);
+  };
+
   useEffect(() => {
     fetchPatientsData();
-  }, [selectedPatients, isReset]);
+  }, [invoiceStatus]);
 
   useEffect(() => {
-    let filtered = [...patients];
-    if (startDate) {
-      filtered = filtered.filter(patient => patient.transferDate >= startDate!);
-    }
-    if (endDate) {
-      filtered = filtered.filter(patient => patient.transferDate <= endDate!);
-    }
-    if (!isReset && selectedPatients.length > 0) {
-      filtered = filtered.filter(patient => selectedPatients.includes(patient.name));
-    }
-    setFilteredPatients(filtered);
-    setCurrentPage(1);
-  }, [startDate, endDate, patients, isReset, selectedPatients]);
+    processPatientData();
+  }, [monthlyData, selectedMonth, selectedType]);
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  useEffect(() => {
+    const filterPatientsByDate = () => {
+      let filtered = [...patients];
+
+      if (startDate) {
+        const start = new Date(startDate);
+        filtered = filtered.filter(patient => new Date(patient.transferDate) >= start);
+      }
+
+      if (endDate) {
+        const end = new Date(endDate);
+        filtered = filtered.filter(patient => new Date(patient.transferDate) <= end);
+      }
+
+      setFilteredPatients(filtered);
+      setCurrentPage(1);
+    };
+
+    filterPatientsByDate();
+  }, [startDate, endDate, patients]);
+
+  const handleFilter = () => {
+    console.log('Filter applied with current selections');
   };
-
-  const formatCurrency = (amount: number) => {
-    return amount.toFixed(2) + " FCFA";
-  };
-
-  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
 
   const handleReset = () => {
-    setStartDate(null);
-    setEndDate(null);
-    setIsReset(true);
+    setStartDate('');
+    setEndDate('');
     setSelectAll(false);
-    const resetPatients = originalPatients.map(patient => ({ ...patient, selected: false }));
-    setPatients(resetPatients);
-    setFilteredPatients(resetPatients);
-  };
-
-  const handleSelectAll = () => {
-    setSelectAll(!selectAll);
-    setFilteredPatients(filteredPatients.map(patient => ({ ...patient, selected: !selectAll })));
-  };
-
-  const handleSelectPatient = (id: string) => {
-    setFilteredPatients(filteredPatients.map(patient =>
-      patient.id === id ? { ...patient, selected: !patient.selected } : patient
-    ));
+    setFilteredPatients(patients.map(patient => ({ ...patient, selected: false })));
   };
 
   const handlePrint = () => {
-    const selectedPatients = filteredPatients.filter(patient => patient.selected);
-    if (selectedPatients.length === 0) {
+    const selectedPatientsData = filteredPatients.filter(patient => patient.selected);
+
+    if (selectedPatientsData.length === 0) {
       alert("Please select at least one patient to print");
       return;
     }
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
     const html = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Patient Report</title>
+          <title>Patient Report - ${invoiceStatus} - ${selectedMonth} - ${selectedType}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
             .header { text-align: center; margin-bottom: 30px; }
             .logo { font-size: 24px; font-weight: bold; color: #1a56db; }
+            .filter-info { text-align: center; margin-bottom: 20px; color: #666; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
             th { background-color: #f8fafc; }
@@ -145,6 +177,9 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
             <div class="logo">Medical Center</div>
             <p>Patient Report - ${new Date().toLocaleDateString()}</p>
           </div>
+          <div class="filter-info">
+            <p><strong>Status:</strong> ${invoiceStatus === 'invoiced' ? 'Invoiced' : 'Not Invoiced'} | <strong>Month:</strong> ${selectedMonth} | <strong>Type:</strong> ${selectedType === 'prescription' ? 'Prescription' : 'Realization'}</p>
+          </div>
           <table>
             <thead>
               <tr>
@@ -156,19 +191,22 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
               </tr>
             </thead>
             <tbody>
-              ${selectedPatients.map(patient => `
+              ${selectedPatientsData.map(patient => `
                 <tr>
                   <td>${patient.id}</td>
                   <td>${patient.name}</td>
                   <td>${patient.examination}</td>
-                  <td>${formatCurrency(patient.commission)}</td>
-                  <td>${formatDate(patient.transferDate)}</td>
+                  <td>${patient.commission}</td>
+                  <td>${patient.transferDate}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
           <div class="total">
-            Total Commission: ${formatCurrency(selectedPatients.reduce((sum, patient) => sum + patient.commission, 0))}
+            Total Commission: ${selectedPatientsData.reduce((sum, patient) => {
+              const amount = parseFloat(patient.commission.replace(/[^\d.-]/g, ''));
+              return sum + (isNaN(amount) ? 0 : amount);
+            }, 0).toFixed(2)} FCFA
           </div>
           <div class="footer">
             <p>Generated by Medical Center Management System</p>
@@ -176,196 +214,367 @@ const PatientsView: React.FC<PatientsViewProps> = ({ selectedPatients }) => {
         </body>
       </html>
     `;
+
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.print();
   };
 
-  const paginatedPatients = filteredPatients.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const handleSelectAll = () => {
+    const updatedPatients = filteredPatients.map(patient => ({
+      ...patient,
+      selected: !selectAll
+    }));
+    setFilteredPatients(updatedPatients);
+    setSelectAll(!selectAll);
+  };
 
-  const totalCommissions = paginatedPatients.reduce((sum, patient) => sum + patient.commission, 0);
+  const handlePatientSelect = (id: string) => {
+    const updatedPatients = filteredPatients.map(patient =>
+      patient.id === id ? { ...patient, selected: !patient.selected } : patient
+    );
+    setFilteredPatients(updatedPatients);
+  };
+
+  const indexOfLastPatient = currentPage * patientsPerPage;
+  const indexOfFirstPatient = indexOfLastPatient - patientsPerPage;
+  const currentPatients = filteredPatients.slice(indexOfFirstPatient, indexOfLastPatient);
+  const totalPages = Math.ceil(filteredPatients.length / patientsPerPage);
+
+  const goToNextPage = () => {
+    setCurrentPage(prevPage => Math.min(prevPage + 1, totalPages));
+  };
+
+  const goToPreviousPage = () => {
+    setCurrentPage(prevPage => Math.max(prevPage - 1, 1));
+  };
+
+  const getTotalCommission = () => {
+    if (!monthlyData || !selectedMonth || !monthlyData[selectedMonth]) return 0;
+
+    const monthData = monthlyData[selectedMonth];
+    const typeData = selectedType === 'prescription' ?
+      monthData.elements_prescription :
+      monthData.elements_realisation;
+
+    return typeData?.commission || 0;
+  };
+
+  if (loading) {
+    return (
+      <div className="w-full bg-white rounded-lg shadow-md p-6">
+        <div className="text-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-800">Registered Patients</h2>
+          <p className="text-gray-500 text-sm mt-1">At the service of your health</p>
+          <div className="w-24 h-1 bg-blue-500 mx-auto mt-2 rounded-full"></div>
+        </div>
+        <div className="text-center py-8">
+          <div className="flex items-center justify-center mb-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-2"></div>
+            <span className="text-gray-600">Loading patients data...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full bg-white rounded-lg shadow-md p-6 relative">
-      {loading && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-          <div className="flex items-center">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            <span className="text-sm">Loading patients data...</span>
-          </div>
-        </div>
-      )}
-      <div className="text-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Registered Patients</h2>
-        <div className="w-24 h-1 bg-blue-500 mx-auto mt-2 rounded-full"></div>
+    <div className="w-full bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
+        <h2 className="text-2xl font-bold text-slate-800">Registered Patients</h2>
+        <div className="w-24 h-1 bg-blue-500 mt-2 rounded-full"></div>
       </div>
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex flex-col">
-            <label className="text-sm font-bold text-gray-800 mb-1">
-              Start Date
-            </label>
-            <DatePicker
-              selected={startDate}
-              onChange={(date) => setStartDate(date)}
-              className="px-3 py-2 border-2 border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholderText="Select start date"
-              maxDate={endDate || new Date()}
-              disabled={loading}
-            />
+
+      {/* Enhanced Filter Section */}
+      <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-200">
+        <div className="space-y-4">
+          {/* Main Filter Controls */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-slate-700">Filter Options</h3>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
+            >
+              <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
           </div>
-          <div className="flex flex-col">
-            <label className="text-sm font-bold text-gray-800 mb-1">
-              End Date
-            </label>
-            <DatePicker
-              selected={endDate}
-              onChange={(date) => setEndDate(date)}
-              className="px-3 py-2 border-2 border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholderText="Select end date"
-              minDate={startDate}
-              maxDate={new Date()}
-              disabled={loading}
-            />
+
+          {/* Invoice Status Selection */}
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => setInvoiceStatus('invoiced')}
+              className={`p-3 rounded-lg border transition-colors ${
+                invoiceStatus === 'invoiced'
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'bg-white text-slate-700 border-slate-300 hover:border-blue-400'
+              }`}
+            >
+              Invoiced
+            </button>
+            <button
+              onClick={() => setInvoiceStatus('Notinvoiced')}
+              className={`p-3 rounded-lg border transition-colors ${
+                invoiceStatus === 'Notinvoiced'
+                  ? 'bg-blue-500 text-white border-blue-500'
+                  : 'bg-white text-slate-700 border-slate-300 hover:border-blue-400'
+              }`}
+            >
+              Not Invoiced
+            </button>
+          </div>
+
+          {showFilters && (
+            <>
+              {/* Month Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Select Month
+                </label>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white"
+                >
+                  <option value="">Select a month</option>
+                  {monthlyData && Object.keys(monthlyData)
+                    .filter(month => month !== 'Total')
+                    .map(month => (
+                      <option key={month} value={month}>
+                        {month} ({monthlyData[month]?.elements_prescription?.data_patients?.length || 0} prescriptions, {monthlyData[month]?.elements_realisation?.data_patients?.length || 0} realizations)
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Type Selection */}
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setSelectedType('prescription')}
+                  className={`p-3 rounded-lg border transition-colors ${
+                    selectedType === 'prescription'
+                      ? 'bg-green-500 text-white border-green-500'
+                      : 'bg-white text-slate-700 border-slate-300 hover:border-green-400'
+                  }`}
+                >
+                  Prescriptions
+                  {monthlyData && selectedMonth && (
+                    <span className="block text-xs mt-1">
+                      ({monthlyData[selectedMonth]?.elements_prescription?.data_patients?.length || 0})
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setSelectedType('realisation')}
+                  className={`p-3 rounded-lg border transition-colors ${
+                    selectedType === 'realisation'
+                      ? 'bg-green-500 text-white border-green-500'
+                      : 'bg-white text-slate-700 border-slate-300 hover:border-green-400'
+                  }`}
+                >
+                  Realization
+                  {monthlyData && selectedMonth && (
+                    <span className="block text-xs mt-1">
+                      ({monthlyData[selectedMonth]?.elements_realisation?.data_patients?.length || 0})
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Date Range Filter */}
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-medium text-slate-700">Filter by Date Range</h4>
+                <button
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
+                >
+                  <Calendar className="w-4 h-4" />
+                </button>
+              </div>
+
+              {showDatePicker && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white"
+                    />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleFilter}
+              className="flex-1 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center justify-center transition-colors shadow-sm"
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Filter
+            </button>
+            <button
+              onClick={handleReset}
+              className="flex-1 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center justify-center transition-colors shadow-sm"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Reset
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex-1 p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center justify-center transition-colors shadow-sm"
+            >
+              <Printer className="w-4 h-4 mr-2" />
+              Print
+            </button>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading}
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            Filter
-          </button>
-          <button
-            onClick={handleReset}
-            className="flex items-center px-4 py-2 border-2 border-black text-black rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading}
-          >
-            <RefreshCcw className="w-4 h-4 mr-2" />
-            Reset
-          </button>
-          <button
-            onClick={handlePrint}
-            className="flex items-center px-4 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading}
-          >
-            <Printer className="w-4 h-4 mr-2" />
-            Print Selected
-          </button>
-        </div>
-      </div>
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">
-          Showing {filteredPatients.length} of {patients.length} Patients
+
+        <p className="text-sm text-slate-600 mt-4">
+          Showing {indexOfFirstPatient + 1} to {Math.min(indexOfLastPatient, filteredPatients.length)} of {filteredPatients.length} patients
+          {selectedMonth && (
+            <span className="ml-2 text-blue-600 font-medium">
+              | {selectedMonth} - {selectedType === 'prescription' ? 'Prescription' : 'Realization'} ({invoiceStatus === 'invoiced' ? 'Invoiced' : 'Not Invoiced'})
+            </span>
+          )}
         </p>
       </div>
+
+      {/* Patients Table */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px]">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">
+        {filteredPatients.length > 0 ? (
+          <>
+            <div className="px-6 py-4 border-b border-slate-200">
+              <div className="flex items-center">
                 <input
                   type="checkbox"
                   checked={selectAll}
                   onChange={handleSelectAll}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  disabled={loading}
+                  className="w-4 h-4 text-blue-500 border-slate-300 rounded mr-3 focus:ring-2 focus:ring-blue-400"
                 />
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">
-                ID
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">
-                Patient Name
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">
-                Examination
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">
-                Commission
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">
-                Transfer Date
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-2"></div>
-                    Loading patients...
-                  </div>
-                </td>
-              </tr>
-            ) : paginatedPatients.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                  No patients found
-                </td>
-              </tr>
-            ) : (
-              paginatedPatients.map((patient, index) => (
-                <tr
-                  key={patient.id}
-                  className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-[#F7F8FA]' : 'bg-white'}`}
-                >
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={patient.selected || false}
-                      onChange={() => handleSelectPatient(patient.id)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{patient.id}</td>
-                  <td className="px-4 py-3 text-sm text-gray-800 font-medium">
-                    {patient.name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {patient.examination}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {formatCurrency(patient.commission)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {formatDate(patient.transferDate)}
-                  </td>
+                <span className="text-sm font-medium text-slate-700">
+                  Select All ({filteredPatients.filter(p => p.selected).length} selected)
+                </span>
+              </div>
+            </div>
+
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="border-b border-gray-200 bg-slate-50">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">Select</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">ID</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">Patient Name</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">Examination</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">Commission</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">Transfer Date</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {currentPatients.map((patient, index) => (
+                  <tr
+                    key={patient.id}
+                    className={`border-b border-gray-100 hover:bg-gray-50 ${
+                      index % 2 === 0 ? 'bg-[#F7F8FA]' : 'bg-white'
+                    }`}
+                  >
+                    <td className="px-6 py-3">
+                      <input
+                        type="checkbox"
+                        checked={patient.selected}
+                        onChange={() => handlePatientSelect(patient.id)}
+                        className="w-4 h-4 text-blue-500 border-slate-300 rounded focus:ring-2 focus:ring-blue-400"
+                      />
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-600">{patient.id}</td>
+                    <td className="px-6 py-3 text-sm text-gray-800 font-medium">{patient.name}</td>
+                    <td className="px-6 py-3 text-sm text-gray-600">{patient.examination}</td>
+                    <td className="px-6 py-3 text-sm">
+                      <span className={`font-bold px-2 py-1 rounded-full text-xs ${
+                        patient.commission.includes('-')
+                          ? 'text-white bg-red-500'
+                          : 'text-white bg-green-500'
+                      }`}>
+                        {patient.commission}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-600">{patient.transferDate}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-slate-400 mb-4">
+              <Calendar className="w-12 h-12 mx-auto" />
+            </div>
+            <h3 className="text-lg font-medium text-slate-600 mb-2">No patients found</h3>
+            <p className="text-slate-500">
+              {selectedMonth
+                ? `No ${selectedType === 'prescription' ? 'prescription' : 'realization'} data available for ${selectedMonth}`
+                : 'Please select a month to view patient data'
+              }
+            </p>
+          </div>
+        )}
       </div>
-      <div className="mt-6">
-        <div className="flex justify-end mb-2">
-          <p className="text-lg font-bold text-black">
-            Total Commission: {formatCurrency(totalCommissions)}
-          </p>
+
+      {/* Pagination */}
+      {filteredPatients.length > 0 && (
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={goToPreviousPage}
+              disabled={currentPage === 1}
+              className="flex items-center px-4 py-2 text-sm text-black font-bold hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Previous
+            </button>
+            <span className="px-4 py-2 rounded-lg bg-gray-100 text-sm font-bold">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages}
+              className="flex items-center px-4 py-2 text-sm text-black font-bold hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1 || loading}
-            className="p-2 border-2 border-black rounded-full text-black hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <span className="px-4 py-2 rounded-lg bg-gray-100">
-            Page {currentPage} of {totalPages}
+      )}
+
+      {/* Total Commission */}
+      <div className="px-6 py-4 border-t-2 border-blue-200 bg-blue-50">
+        <div className="text-center">
+          <span className="text-xl font-semibold text-slate-800">
+            Total Commission: <span className="text-blue-600 font-bold">
+              {getTotalCommission().toFixed(2)} FCFA
+            </span>
           </span>
-          <button
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages || loading}
-            className="p-2 border-2 border-black rounded-full text-black hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+          {selectedMonth && (
+            <p className="text-sm text-slate-600 mt-1">
+              {selectedMonth} - {selectedType === 'prescription' ? 'Prescription' : 'Realization'} ({invoiceStatus === 'invoiced' ? 'Invoiced' : 'Not Invoiced'})
+            </p>
+          )}
         </div>
       </div>
     </div>

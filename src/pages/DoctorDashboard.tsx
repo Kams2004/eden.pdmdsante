@@ -99,7 +99,7 @@ function DoctorDashboard() {
                     <CommissionOverview commissionData={commissionData} showAmount={showAllCommissions} setShowAmount={setShowAllCommissions} />
                     <StatCards showAmount={showTodaysCommissions} setShowAmount={setShowTodaysCommissions} stats={{ commission: { amount: 15750, count: 25, transactions: 42 }, patients: { total: 150, percentage: 75 }, examinations: { total: 85, percentage: 60 } }} />
                     <Actualities />
-                    <MonthlyTransactions data={{ count: 1234, amount: 45678, total: 5678 }} />
+                    {/* <MonthlyTransactions data={{ count: 1234, amount: 45678, total: 5678 }} /> */}
                     <PatientsList onDetailsClick={handleDetailsClick} />
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {/* <WeeklyRevenue />

@@ -58,9 +58,9 @@ const MobileDoctorDashboard = () => {
             <>
               <MobileStatsCards />
               <MobileTodayStats />
-              <MobileGeneralInfo onMenuClick={handleMenuClick} />
+              {/* <MobileGeneralInfo onMenuClick={handleMenuClick} /> */}
 
-              <MobilePatientsList onDetailsClick={handleDetailsClick} />
+              {/* <MobilePatientsList onDetailsClick={handleDetailsClick} /> */}
             </>
           )}
           {currentView === 'patients' && (
