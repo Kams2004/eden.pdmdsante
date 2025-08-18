@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import axiosInstance from '../../api/axioConfig';
-import { Plus, Pencil, Trash2, Search, User as UserMd, Phone, Mail, Download, Check, X, AtSign } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, User as UserMd, Phone, Mail, Download, Check, X, AtSign, AlertTriangle } from 'lucide-react';
 
 // Define the props for the ToggleSwitch component
 interface ToggleSwitchProps {
@@ -19,6 +19,46 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ isOn, handleToggle }) => {
         <div
           className={`bg-white w-4 h-4 rounded-full shadow-md transform ${isOn ? 'translate-x-6' : 'translate-x-0'}`}
         ></div>
+      </div>
+    </div>
+  );
+};
+
+// Delete Confirmation Modal Component
+interface DeleteConfirmationModalProps {
+  isOpen: boolean;
+  doctorName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({ isOpen, doctorName, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <div className="flex items-center mb-4">
+          <AlertTriangle className="w-6 h-6 text-red-500 mr-3" />
+          <h2 className="text-xl font-bold text-gray-800">Confirm Deletion</h2>
+        </div>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete <span className="font-semibold">{doctorName}</span>? This action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -61,6 +101,11 @@ const Doctors: React.FC = () => {
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [isStaticSearch, setIsStaticSearch] = useState(false);
+  
+  // Delete modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [doctorToDelete, setDoctorToDelete] = useState<Doctor | null>(null);
+  
   const itemsPerPage = 6;
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -131,10 +176,22 @@ const Doctors: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (doctorId: string) => {
-    if (window.confirm('Are you sure you want to delete this doctor?')) {
-      setDoctors(doctors.filter(doctor => doctor.id !== doctorId));
+  const handleDeleteClick = (doctor: Doctor) => {
+    setDoctorToDelete(doctor);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (doctorToDelete) {
+      setDoctors(doctors.filter(doctor => doctor.id !== doctorToDelete.id));
+      setIsDeleteModalOpen(false);
+      setDoctorToDelete(null);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setIsDeleteModalOpen(false);
+    setDoctorToDelete(null);
   };
 
   const handleLoadDoctors = async () => {
@@ -392,7 +449,7 @@ const Doctors: React.FC = () => {
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(doctor.id)}
+                      onClick={() => handleDeleteClick(doctor)}
                       className="text-red-600 hover:text-red-900"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -447,6 +504,8 @@ const Doctors: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Edit Doctor Modal */}
       {isModalOpen && editingDoctor && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
@@ -456,7 +515,7 @@ const Doctors: React.FC = () => {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700">First Name</label>
                 <div className="flex items-center">
@@ -572,10 +631,18 @@ const Doctors: React.FC = () => {
                   Save
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        doctorName={doctorToDelete?.name || ''}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
     </div>
   );
 };

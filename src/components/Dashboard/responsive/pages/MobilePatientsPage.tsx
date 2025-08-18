@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, RefreshCw, Printer, Calendar, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Filter, RefreshCw, Printer, Calendar, ChevronLeft, ChevronRight, ChevronDown, Search } from 'lucide-react';
 import axiosInstance from "../../../../api/axioConfig";
 
 interface Patient {
@@ -31,6 +31,9 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({ selectedP
   const [selectedType, setSelectedType] = useState<'prescription' | 'realisation'>('prescription');
   const [showFilters, setShowFilters] = useState(false);
   const [monthlyData, setMonthlyData] = useState<any>(null);
+
+  // Nouvel état pour la recherche par nom
+  const [searchTerm, setSearchTerm] = useState('');
 
   const patientsPerPage = 6;
   const currentYear = new Date().getFullYear();
@@ -115,8 +118,17 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({ selectedP
   }, [monthlyData, selectedMonth, selectedType]);
 
   useEffect(() => {
-    const filterPatientsByDate = () => {
+    const filterPatients = () => {
       let filtered = [...patients];
+      
+      // Filtrage par nom
+      if (searchTerm) {
+        filtered = filtered.filter(patient => 
+          patient.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+      
+      // Filtrage par date
       if (startDate) {
         const start = new Date(startDate);
         filtered = filtered.filter(patient => new Date(patient.transferDate) >= start);
@@ -125,11 +137,12 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({ selectedP
         const end = new Date(endDate);
         filtered = filtered.filter(patient => new Date(patient.transferDate) <= end);
       }
+      
       setFilteredPatients(filtered);
       setCurrentPage(1);
     };
-    filterPatientsByDate();
-  }, [startDate, endDate, patients]);
+    filterPatients();
+  }, [startDate, endDate, patients, searchTerm]);
 
   const handleFilter = () => {
     console.log('Filtre appliqué avec les sélections actuelles');
@@ -138,6 +151,7 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({ selectedP
   const handleReset = () => {
     setStartDate('');
     setEndDate('');
+    setSearchTerm('');
     setSelectAll(false);
     setFilteredPatients(patients.map(patient => ({ ...patient, selected: false })));
   };
@@ -169,7 +183,7 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({ selectedP
         </head>
         <body>
           <div class="header">
-            <div class="logo">Centre Médical</div>
+            <div class="logo">PDMD</div>
             <p>Rapport des Patients - ${new Date().toLocaleDateString()}</p>
           </div>
           <div class="filter-info">
@@ -204,7 +218,7 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({ selectedP
             }, 0).toFixed(2)} FCFA
           </div>
           <div class="footer">
-            <p>Généré par le Système de Gestion du Centre Médical</p>
+            <p>Généré par le Système de Gestion de la PDMD</p>
           </div>
         </body>
       </html>
@@ -259,7 +273,7 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({ selectedP
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">
           <h1 className="text-xl font-semibold text-slate-800">Patients Enregistrés</h1>
-          <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
+ 
           <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
         </div>
         <div className="px-4 py-8 text-center">
@@ -282,9 +296,39 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({ selectedP
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">
         <h1 className="text-xl font-semibold text-slate-800">Patients Enregistrés</h1>
-        {/* <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p> */}
+  
         <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
       </div>
+
+      {/* Barre de Recherche - Section Prominente */}
+      <div className="px-4 sm:px-6 py-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-blue-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Rechercher un patient par nom..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 text-base border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm transition-all duration-200 hover:border-blue-300"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        {searchTerm && (
+          <p className="mt-2 text-sm text-blue-600 font-medium">
+            {filteredPatients.length} patient(s) trouvé(s) pour "{searchTerm}"
+          </p>
+        )}
+      </div>
+
       {/* Section de Filtre Améliorée */}
       <div className="px-4 sm:px-6 py-4 bg-slate-50/50 border-b border-slate-200">
         <div className="space-y-4">
@@ -506,10 +550,13 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({ selectedP
             </div>
             <h3 className="text-lg font-medium text-slate-600 mb-2">Aucun patient trouvé</h3>
             <p className="text-slate-500">
-              {selectedMonth ?
-                `Aucune donnée de ${selectedType === 'prescription' ? 'prescription' : 'réalisation'} disponible pour ${selectedMonth}` :
+              {searchTerm ? (
+                `Aucun patient trouvé pour "${searchTerm}"`
+              ) : selectedMonth ? (
+                `Aucune donnée de ${selectedType === 'prescription' ? 'prescription' : 'réalisation'} disponible pour ${selectedMonth}`
+              ) : (
                 'Veuillez sélectionner un mois pour voir les données des patients'
-              }
+              )}
             </p>
           </div>
         )}

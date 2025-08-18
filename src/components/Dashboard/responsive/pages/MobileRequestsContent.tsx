@@ -151,7 +151,7 @@ const MobileRequestView: React.FC = () => {
         {/* En-tête */}
         <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4">
           <h1 className="text-xl font-semibold text-black">Soumettre une Demande de Commission</h1>
-          <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
+
           <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
         </div>
         {/* Chargement du formulaire de nouvelle commission */}
@@ -247,7 +247,7 @@ const MobileRequestView: React.FC = () => {
       {/* En-tête */}
       <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4">
         <h1 className="text-xl font-semibold text-black">Soumettre une Demande de Commission</h1>
-        <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
+  
         <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
       </div>
       {/* Formulaire de Nouvelle Commission */}

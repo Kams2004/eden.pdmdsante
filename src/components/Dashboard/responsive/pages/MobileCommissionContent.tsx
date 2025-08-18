@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, RefreshCw, Printer, Calendar, ChevronLeft, ChevronRight, FileText, Activity } from 'lucide-react';
+import { Filter, RefreshCw, Printer, Calendar, ChevronLeft, ChevronRight, FileText, Activity, Search } from 'lucide-react';
 import axiosInstance from "../../../../api/axioConfig";
 
 interface Patient {
@@ -41,6 +41,9 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState<'prescription' | 'realisation'>('prescription');
   const [commissionData, setCommissionData] = useState<CommissionData | null>(null);
+
+  // Nouvel état pour la recherche par nom
+  const [searchTerm, setSearchTerm] = useState('');
 
   const patientsPerPage = 5;
 
@@ -91,9 +94,18 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
   }, []);
 
   useEffect(() => {
-    const filterPatientsByDate = () => {
-      const filterByDate = (patients: Patient[]) => {
+    const filterPatients = () => {
+      const filterData = (patients: Patient[]) => {
         let filtered = [...patients];
+        
+        // Filtrage par nom
+        if (searchTerm) {
+          filtered = filtered.filter(patient => 
+            patient.name.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }
+        
+        // Filtrage par date
         if (startDate) {
           const start = new Date(startDate);
           filtered = filtered.filter(patient => new Date(patient.transferDate) >= start);
@@ -104,12 +116,12 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
         }
         return filtered;
       };
-      setFilteredPrescriptionPatients(filterByDate(prescriptionPatients));
-      setFilteredRealisationPatients(filterByDate(realisationPatients));
+      setFilteredPrescriptionPatients(filterData(prescriptionPatients));
+      setFilteredRealisationPatients(filterData(realisationPatients));
       setCurrentPage(1);
     };
-    filterPatientsByDate();
-  }, [startDate, endDate, prescriptionPatients, realisationPatients]);
+    filterPatients();
+  }, [startDate, endDate, prescriptionPatients, realisationPatients, searchTerm]);
 
   const getCurrentPatients = () => {
     return activeTab === 'prescription' ? filteredPrescriptionPatients : filteredRealisationPatients;
@@ -130,6 +142,7 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
   const handleReset = () => {
     setStartDate('');
     setEndDate('');
+    setSearchTerm('');
     setSelectAll(false);
     setFilteredPrescriptionPatients(prescriptionPatients.map(patient => ({ ...patient, selected: false })));
     setFilteredRealisationPatients(realisationPatients.map(patient => ({ ...patient, selected: false })));
@@ -165,7 +178,7 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
       </head>
       <body>
         <div class="header">
-          <div class="logo">Centre Médical</div>
+          <div class="logo">PDMD</div>
           <p>Rapport de ${activeTab === 'prescription' ? 'Prescription' : 'Réalisation'} - ${new Date().toLocaleDateString()}</p>
         </div>
         <table>
@@ -201,7 +214,7 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
           }, 0).toFixed(2)} FCFA
         </div>
         <div class="footer">
-          <p>Généré par le Système de Gestion du Centre Médical</p>
+          <p>Généré par le Système de Gestion de la PDMD</p>
         </div>
       </body>
       </html>
@@ -299,6 +312,36 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
           <h1 className="text-xl font-semibold text-slate-800">Détails des Commissions</h1>
           <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
         </div>
+
+        {/* Barre de Recherche - Section Prominente */}
+        <div className="px-4 sm:px-6 py-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-blue-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Rechercher un patient par nom..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 text-base border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm transition-all duration-200 hover:border-blue-300"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {searchTerm && (
+            <p className="mt-2 text-sm text-blue-600 font-medium">
+              {currentPatients.length} patient(s) trouvé(s) pour "{searchTerm}"
+            </p>
+          )}
+        </div>
+
         <div className="border-b border-slate-200">
           <div className="flex">
             <button
@@ -396,79 +439,99 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({ selec
           </p>
         </div>
         <div className="px-4 py-2">
-          <div className="flex items-center mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
-            <input
-              type="checkbox"
-              checked={selectAll}
-              onChange={handleSelectAll}
-              className="w-4 h-4 text-blue-500 border-slate-300 rounded mr-3 focus:ring-2 focus:ring-blue-400"
-            />
-            <span className="text-sm font-medium text-slate-700">
-              Tout Sélectionner ({currentPatients.filter(p => p.selected).length} sélectionné(s))
-            </span>
-          </div>
-          <div className="space-y-3">
-            {paginatedPatients.map((patient, index) => (
-              <div key={patient.id || index} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
-                <div className="absolute bottom-0 left-0 w-12 h-12 bg-blue-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
-                <div className="flex items-start justify-between mb-3 relative z-10">
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={patient.selected}
-                      onChange={() => handlePatientSelect(patient.id)}
-                      className="w-4 h-4 text-blue-500 border-slate-300 rounded focus:ring-2 focus:ring-blue-400"
-                    />
-                    <span className="text-xs font-medium flex items-center text-black bg-white px-2 py-1 rounded-full">
-                      <Calendar className="w-3 h-3 mr-1 text-black" />
-                      {patient.transferDate}
-                    </span>
-                  </div>
-                  <div className="flex space-x-2">
-                    <span className={`text-xs font-semibold px-2 py-1 rounded text-white ${getFactureColor(patient.facture)}`}>
-                      {patient.facture}
-                    </span>
-                  </div>
-                </div>
-                <div className="mb-3 relative z-10">
-                  <h1 className="text-base font-bold mb-2 text-blue-800">{patient.name}</h1>
-                  <p className="text-xs font-medium text-gray-600 bg-white p-2 rounded-lg border border-blue-200">
-                    {patient.examination}
-                  </p>
-                </div>
-                <div className="flex justify-end items-center pt-3 border-t border-blue-200 relative z-10">
-                  <span className="text-sm font-bold text-white bg-green-500 px-3 py-1 rounded-full">
-                    {patient.commission}
-                  </span>
-                </div>
+          {currentPatients.length > 0 ? (
+            <>
+              <div className="flex items-center mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <input
+                  type="checkbox"
+                  checked={selectAll}
+                  onChange={handleSelectAll}
+                  className="w-4 h-4 text-blue-500 border-slate-300 rounded mr-3 focus:ring-2 focus:ring-blue-400"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  Tout Sélectionner ({currentPatients.filter(p => p.selected).length} sélectionné(s))
+                </span>
               </div>
-            ))}
-          </div>
+              <div className="space-y-3">
+                {paginatedPatients.map((patient, index) => (
+                  <div key={patient.id || index} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
+                    <div className="absolute bottom-0 left-0 w-12 h-12 bg-blue-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
+                    <div className="flex items-start justify-between mb-3 relative z-10">
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={patient.selected}
+                          onChange={() => handlePatientSelect(patient.id)}
+                          className="w-4 h-4 text-blue-500 border-slate-300 rounded focus:ring-2 focus:ring-blue-400"
+                        />
+                        <span className="text-xs font-medium flex items-center text-black bg-white px-2 py-1 rounded-full">
+                          <Calendar className="w-3 h-3 mr-1 text-black" />
+                          {patient.transferDate}
+                        </span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded text-white ${getFactureColor(patient.facture)}`}>
+                          {patient.facture}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mb-3 relative z-10">
+                      <h1 className="text-base font-bold mb-2 text-blue-800">{patient.name}</h1>
+                      <p className="text-xs font-medium text-gray-600 bg-white p-2 rounded-lg border border-blue-200">
+                        {patient.examination}
+                      </p>
+                    </div>
+                    <div className="flex justify-end items-center pt-3 border-t border-blue-200 relative z-10">
+                      <span className="text-sm font-bold text-white bg-green-500 px-3 py-1 rounded-full">
+                        {patient.commission}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-slate-400 mb-4">
+                <Calendar className="w-12 h-12 mx-auto" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-600 mb-2">Aucun patient trouvé</h3>
+              <p className="text-slate-500">
+                {searchTerm ? (
+                  `Aucun patient trouvé pour "${searchTerm}" dans ${activeTab === 'prescription' ? 'les prescriptions' : 'les réalisations'}`
+                ) : (
+                  `Aucune donnée de ${activeTab === 'prescription' ? 'prescription' : 'réalisation'} disponible`
+                )}
+              </p>
+            </div>
+          )}
         </div>
-        <div className="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={goToPreviousPage}
-              disabled={currentPage === 1}
-              className="flex items-center px-3 py-2 text-sm text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              <span>Précédent</span>
-            </button>
-            <span className="text-sm text-black font-bold">
-              Page {currentPage} sur {totalPages}
-            </span>
-            <button
-              onClick={goToNextPage}
-              disabled={currentPage === totalPages}
-              className="flex items-center px-3 py-2 text-sm text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span>Suivant</span>
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </button>
+        {currentPatients.length > 0 && (
+          <div className="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className="flex items-center px-3 py-2 text-sm text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                <span>Précédent</span>
+              </button>
+              <span className="text-sm text-black font-bold">
+                Page {currentPage} sur {totalPages}
+              </span>
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="flex items-center px-3 py-2 text-sm text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span>Suivant</span>
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
         <div className="px-4 sm:px-6 py-4 border-t-2 border-blue-200 bg-blue-50 sticky bottom-0">
           <div className="text-center sm:text-right">
             <span className="text-lg sm:text-xl font-semibold text-slate-800">

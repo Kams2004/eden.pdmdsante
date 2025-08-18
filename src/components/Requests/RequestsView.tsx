@@ -1,59 +1,53 @@
-import { useState, useEffect } from 'react';
-import { Send, AlertCircle, Clock, CheckCircle, XCircle, Filter, Search, MessageSquare } from 'lucide-react';
-import { useToast } from '../../hooks/useToast';
-import Pagination from '../UI/Pagination';
+import React, { useState, useEffect, FormEvent } from 'react';
+import { Send, AlertCircle, Clock, CheckCircle, XCircle, Search, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import axiosInstance from '../../api/axioConfig';
+import { useToast } from '../../hooks/useToast';
 
+// Définir les interfaces
 interface Request {
   id: string;
   type: string;
   description: string;
-  urgency: 'low' | 'medium' | 'high';
-  status: 'pending' | 'approved' | 'rejected';
+  urgency: string;
+  status: string;
   customMessage?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-interface ApiRequest {
-  CreatedAt: string;
-  CreatedBy: number;
-  UpdatedAt: string | null;
-  UpdatedBy: number | null;
-  administration: boolean;
-  commission: boolean;
-  connection: boolean;
-  email: string;
-  error: boolean;
-  first_name: string;
-  id: number;
-  last_name: string;
-  message: string;
-  revendication_examen: boolean;
-  suggestion: boolean;
-  valide: boolean;
+interface PredefinedRequest {
+  id: string;
+  title: string;
+  description: string;
 }
 
-const predefinedRequests = [
+interface UserData {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
+const predefinedRequests: PredefinedRequest[] = [
   {
     id: 'commission-mismatch',
-    title: 'Commission Mismatch',
-    description: 'Report a discrepancy between displayed and received commissions'
+    title: 'Inadéquation de Commission',
+    description: 'Signaler une divergence entre les commissions affichées et reçues'
   },
   {
-    id: 'patient-record',
-    title: 'Patient Record Issue',
-    description: 'Report issues with patient records or missing information'
+    id: 'commission-delay',
+    title: 'Retard de Commission',
+    description: 'Signaler des retards dans les paiements de commissions'
   },
   {
-    id: 'system-error',
-    title: 'System Error',
-    description: 'Report technical issues or system malfunctions'
+    id: 'commission-error',
+    title: 'Erreur de Commission',
+    description: 'Signaler des erreurs dans les calculs de commissions'
   },
   {
-    id: 'payment-delay',
-    title: 'Payment Delay',
-    description: 'Report delays in commission payments'
+    id: 'commission-query',
+    title: 'Demande de Commission',
+    description: 'Demande concernant la structure ou les détails de la commission'
   }
 ];
 
@@ -61,27 +55,28 @@ const RequestsView: React.FC = () => {
   const { showSuccessToast, showErrorToast, ToastComponent } = useToast();
   const [selectedRequest, setSelectedRequest] = useState<string>('');
   const [customMessage, setCustomMessage] = useState<string>('');
-  const [urgency, setUrgency] = useState<'low' | 'medium' | 'high'>('low');
+  const [urgency, setUrgency] = useState<string>('low');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [loading, setLoading] = useState<boolean>(false);
-  const itemsPerPage: number = 5;
+  const [loading, setLoading] = useState<boolean>(true);
+  const itemsPerPage: number = 6; // Augmenté pour le bureau
   const [sentRequests, setSentRequests] = useState<Request[]>([]);
 
   const fetchUserRequests = async () => {
     try {
-      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const userData: UserData = JSON.parse(localStorage.getItem('userData') || '{}');
       const userId = userData.id;
+
       if (userId) {
-        const response = await axiosInstance.get<ApiRequest[]>(`/requete/get_requests/${userId}`);
-        const requests: Request[] = response.data.map((req: ApiRequest) => ({
+        const response = await axiosInstance.get<Request[]>(`/requete/get_requests/${userId}`);
+        const requests: Request[] = response.data.map((req: any) => ({
           id: String(req.id),
-          type: req.commission ? 'Commission Mismatch' :
-                req.revendication_examen ? 'Patient Record Issue' :
-                req.error ? 'System Error' : 'Payment Delay',
+          type: req.commission ? 'Inadéquation de Commission' :
+                req.revendication_examen ? 'Problème de Dossier Patient' :
+                req.error ? 'Erreur Système' : 'Retard de Paiement',
           description: req.message,
-          urgency: 'low', // Default urgency, adjust as needed
+          urgency: 'low',
           status: req.valide ? 'approved' : 'pending',
           customMessage: req.message,
           createdAt: req.CreatedAt,
@@ -90,7 +85,9 @@ const RequestsView: React.FC = () => {
         setSentRequests(requests);
       }
     } catch (error) {
-      console.error('Error fetching user requests:', error);
+      console.error('Erreur lors de la récupération des demandes de l\'utilisateur :', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -98,43 +95,39 @@ const RequestsView: React.FC = () => {
     fetchUserRequests();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedRequest || !customMessage) return;
     setLoading(true);
-
     const selectedPredefinedRequest = predefinedRequests.find(r => r.id === selectedRequest);
     if (!selectedPredefinedRequest) {
       setLoading(false);
       return;
     }
-
-    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    const userData: UserData = JSON.parse(localStorage.getItem('userData') || '{}');
     const { email, first_name, last_name } = userData;
-
     const requestData = {
       administration: false,
       commission: selectedRequest === 'commission-mismatch',
       connection: false,
       email,
-      error: selectedRequest === 'system-error',
-      first_name,
-      last_name,
+      error: selectedRequest === 'commission-error',
+      first_name: first_name,
+      last_name: last_name,
       message: customMessage,
-      revendication_examen: selectedRequest === 'patient-record',
-      suggestion: selectedRequest === 'payment-delay'
+      revendication_examen: selectedRequest === 'commission-query',
+      suggestion: selectedRequest === 'commission-delay'
     };
-
     try {
       await axiosInstance.post('/requete/add', requestData);
-      showSuccessToast('Request sent successfully');
+      showSuccessToast('Demande envoyée avec succès');
       await fetchUserRequests();
       setSelectedRequest('');
       setCustomMessage('');
       setUrgency('low');
     } catch (error) {
-      console.error('Error sending request:', error);
-      showErrorToast('Failed to send request');
+      console.error('Erreur lors de l\'envoi de la demande :', error);
+      showErrorToast('Échec de l\'envoi de la demande');
     } finally {
       setLoading(false);
     }
@@ -153,163 +146,291 @@ const RequestsView: React.FC = () => {
   const indexOfFirstItem: number = indexOfLastItem - itemsPerPage;
   const currentRequests: Request[] = filteredRequests.slice(indexOfFirstItem, indexOfLastItem);
 
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        {/* En-tête */}
+        <div className="bg-white border-b border-slate-200 px-6 py-6">
+          <h1 className="text-2xl font-semibold text-black">Soumettre une Demande de Commission</h1>
+
+          <div className="w-16 h-1 bg-blue-400 mt-3 rounded-full"></div>
+        </div>
+        {/* Chargement du formulaire de nouvelle demande */}
+        <div className="px-6 py-6 bg-blue-50/30 border-b border-blue-200">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {[...Array(4)].map((_, index) => (
+                <div key={index} className="p-5 border rounded-lg shadow-sm bg-white animate-pulse">
+                  <div className="flex items-start gap-4">
+                    <div className="w-6 h-6 mt-0.5 bg-slate-200 rounded-full"></div>
+                    <div className="flex-1">
+                      <div className="h-5 w-40 bg-slate-200 rounded mb-3"></div>
+                      <div className="h-4 w-full bg-slate-200 rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white p-5 rounded-lg border border-blue-200 shadow-sm animate-pulse">
+              <div className="h-5 w-40 bg-slate-200 rounded mb-4"></div>
+              <div className="flex gap-3">
+                {[...Array(3)].map((_, index) => (
+                  <div key={index} className="px-6 py-3 text-base rounded-lg capitalize font-medium bg-slate-200 w-24"></div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-white p-5 rounded-lg border border-blue-200 shadow-sm animate-pulse">
+              <div className="h-5 w-56 bg-slate-200 rounded mb-3"></div>
+              <div className="w-full h-24 bg-slate-200 rounded-lg"></div>
+            </div>
+            <div className="flex justify-end">
+              <div className="flex items-center px-8 py-4 bg-slate-200 text-white text-base font-medium rounded-lg w-48"></div>
+            </div>
+          </div>
+        </div>
+        {/* Chargement de la liste des demandes envoyées */}
+        <div className="px-6 py-6 border-t border-blue-200">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <div className="h-7 w-56 bg-slate-200 rounded mb-3"></div>
+              <div className="w-10 h-1 bg-slate-200 rounded-full"></div>
+            </div>
+          </div>
+          <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:space-x-4 mb-6">
+            <div className="relative flex-1">
+              <div className="h-12 w-full bg-slate-200 rounded-lg"></div>
+            </div>
+            <div className="h-12 w-48 bg-slate-200 rounded-lg"></div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, index) => (
+              <div key={index} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-5 shadow-sm relative overflow-hidden animate-pulse">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200 opacity-20 rounded-full -translate-y-10 translate-x-10"></div>
+                <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-300 opacity-15 rounded-full translate-y-8 -translate-x-8"></div>
+
+                <div className="flex items-start justify-between mb-4 relative z-10">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-slate-200 rounded-full mt-0.5"></div>
+                    <div>
+                      <div className="h-5 w-36 bg-slate-200 rounded mb-2"></div>
+                      <div className="h-4 w-48 bg-slate-200 rounded"></div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-6 h-6 bg-slate-200 rounded-full"></div>
+                    <div className="h-6 w-16 bg-slate-200 rounded-full"></div>
+                  </div>
+                </div>
+                <div className="mb-4 relative z-10">
+                  <div className="h-16 w-full bg-slate-200 rounded-lg"></div>
+                </div>
+                <div className="flex justify-between items-center pt-4 border-t border-blue-200 relative z-10">
+                  <div className="h-3 w-28 bg-slate-200 rounded"></div>
+                  <div className="h-3 w-28 bg-slate-200 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Chargement de la pagination */}
+          <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 mt-6">
+            <div className="flex items-center justify-between">
+              <div className="h-10 w-32 bg-slate-200 rounded-lg"></div>
+              <div className="h-5 w-32 bg-slate-200 rounded"></div>
+              <div className="h-10 w-32 bg-slate-200 rounded-lg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {/* New Request Form */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Submit New Request</h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {predefinedRequests.map((request) => (
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      {/* En-tête */}
+      <div className="bg-white border-b border-slate-200 px-6 py-6">
+        <h1 className="text-2xl font-semibold text-black">Soumettre une Demande de Commission</h1>
+     
+        <div className="w-16 h-1 bg-blue-400 mt-3 rounded-full"></div>
+      </div>
+      {/* Formulaire de Nouvelle Demande */}
+      <div className="px-6 py-6 bg-blue-50/30 border-b border-blue-200">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {predefinedRequests.map((request: PredefinedRequest) => (
               <div
                 key={request.id}
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                className={`p-5 border rounded-lg cursor-pointer transition-all duration-200 shadow-sm hover:shadow-md ${
                   selectedRequest === request.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-blue-300'
+                    ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100'
+                    : 'border-slate-200 hover:border-blue-300 bg-white'
                 }`}
                 onClick={() => setSelectedRequest(request.id)}
               >
-                <div className="flex items-start gap-3">
-                  <AlertCircle className={`w-5 h-5 mt-0.5 ${
-                    selectedRequest === request.id ? 'text-blue-500' : 'text-gray-400'
+                <div className="flex items-start gap-4">
+                  <AlertCircle className={`w-6 h-6 mt-0.5 ${
+                    selectedRequest === request.id ? 'text-blue-500' : 'text-slate-400'
                   }`} />
                   <div>
-                    <h3 className="font-medium text-gray-900">{request.title}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{request.description}</p>
+                    <h3 className={`text-base font-semibold ${
+                      selectedRequest === request.id ? 'text-blue-800' : 'text-slate-800'
+                    }`}>{request.title}</h3>
+                    <p className={`text-sm mt-1 ${
+                      selectedRequest === request.id ? 'text-blue-600' : 'text-slate-600'
+                    }`}>{request.description}</p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Urgency Level
-            </label>
-            <div className="flex gap-4">
-              {['low', 'medium', 'high'].map((level) => (
+          <div className="bg-white p-5 rounded-lg border border-blue-200 shadow-sm">
+            <label className="block text-base font-semibold text-blue-800 mb-3">Niveau d'Urgence</label>
+            <div className="flex gap-3">
+              {['low', 'medium', 'high'].map((level: string) => (
                 <button
                   key={level}
                   type="button"
-                  className={`px-4 py-2 rounded-full capitalize ${
+                  className={`px-6 py-3 text-base rounded-lg capitalize font-medium transition-colors ${
                     urgency === level
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-blue-500 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
-                  onClick={() => setUrgency(level as 'low' | 'medium' | 'high')}
+                  onClick={() => setUrgency(level)}
                 >
-                  {level}
+                  {level === 'low' ? 'Faible' : level === 'medium' ? 'Moyen' : 'Élevé'}
                 </button>
               ))}
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Additional Details
-            </label>
+          <div className="bg-white p-5 rounded-lg border border-blue-200 shadow-sm">
+            <label className="block text-base font-semibold text-blue-800 mb-3">Détails Supplémentaires</label>
             <textarea
               value={customMessage}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomMessage(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Please provide any additional information about your request..."
+              rows={5}
+              className="w-full px-4 py-4 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white hover:border-slate-400 transition-colors"
+              placeholder="Veuillez fournir toute information supplémentaire concernant votre demande de commission..."
             ></textarea>
           </div>
           <div className="flex justify-end">
             <button
               type="submit"
               disabled={!selectedRequest || !customMessage || loading}
-              className="flex items-center px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center px-8 py-4 bg-blue-500 text-white text-base font-medium rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              onClick={handleSubmit}
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-3 h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Sending...
+                  Envoi en cours...
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Request
+                  <Send className="w-5 h-5 mr-2" />
+                  Envoyer la Demande
                 </>
               )}
             </button>
           </div>
-        </form>
+        </div>
       </div>
-      {/* Sent Requests List */}
-      <div className="bg-white rounded-xl shadow-md p-6">
+      {/* Liste des Demandes Envoyées */}
+      <div className="px-6 py-6 border-t border-blue-200">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800">Sent Requests</h2>
-          <div className="flex gap-4">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search requests..."
-                value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            </div>
-            <select
-              value={statusFilter}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
+          <div>
+            <h2 className="text-2xl font-semibold text-blue-800">Demandes Envoyées</h2>
+            <div className="w-10 h-1 bg-blue-400 mt-2 rounded-full"></div>
           </div>
         </div>
-        <div className="space-y-4">
+        <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:space-x-4 mb-6">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Rechercher des demandes..."
+              value={searchTerm}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+              className="pl-12 pr-4 py-4 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 w-full bg-white hover:border-slate-400 transition-colors"
+            />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
+            className="px-6 py-4 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white hover:border-slate-400 transition-colors min-w-48"
+          >
+            <option value="all">Tous les Statuts</option>
+            <option value="pending">En Attente</option>
+            <option value="approved">Approuvé</option>
+            <option value="rejected">Rejeté</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {currentRequests.map((request: Request) => (
-            <div key={request.id} className="border rounded-lg p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-4">
-                  <MessageSquare className="w-5 h-5 text-blue-500 mt-1" />
+            <div key={request.id} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-5 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200 opacity-20 rounded-full -translate-y-10 translate-x-10"></div>
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-300 opacity-15 rounded-full translate-y-8 -translate-x-8"></div>
+
+              <div className="flex items-start justify-between mb-4 relative z-10">
+                <div className="flex items-start space-x-3">
+                  <MessageSquare className="w-6 h-6 text-blue-500 mt-0.5" />
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800">{request.type}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{request.description}</p>
-                    {request.customMessage && (
-                      <p className="text-sm text-gray-500 mt-2 bg-gray-50 p-2 rounded">
-                        {request.customMessage}
-                      </p>
-                    )}
+                    <h3 className="text-base font-bold text-blue-800">{request.type}</h3>
+                    <p className="text-sm text-blue-700 mt-1">{request.description}</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
-                  {request.status === 'approved' && <CheckCircle className="w-5 h-5 text-green-500" />}
-                  {request.status === 'rejected' && <XCircle className="w-5 h-5 text-red-500" />}
-                  {request.status === 'pending' && <Clock className="w-5 h-5 text-yellow-500" />}
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                <div className="flex items-center space-x-2">
+                  {request.status === 'approved' && <CheckCircle className="w-6 h-6 text-green-500" />}
+                  {request.status === 'rejected' && <XCircle className="w-6 h-6 text-red-500" />}
+                  {request.status === 'pending' && <Clock className="w-6 h-6 text-yellow-500" />}
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
                     request.urgency === 'high' ? 'bg-red-100 text-red-800' :
                     request.urgency === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                     'bg-green-100 text-green-800'
                   }`}>
-                    {request.urgency}
+                    {request.urgency === 'high' ? 'Élevé' : request.urgency === 'medium' ? 'Moyen' : 'Faible'}
                   </span>
                 </div>
               </div>
-              <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-                <span>Created: {request.createdAt}</span>
-                <span>Last Updated: {request.updatedAt}</span>
+              {request.customMessage && (
+                <div className="mb-4 relative z-10">
+                  <p className="text-sm font-medium text-blue-700 bg-white p-4 rounded-lg border border-blue-200">
+                    {request.customMessage}
+                  </p>
+                </div>
+              )}
+              <div className="flex justify-between items-center pt-4 border-t border-blue-200 relative z-10">
+                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Créé: {request.createdAt}</span>
+                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Mis à jour: {request.updatedAt}</span>
               </div>
             </div>
           ))}
         </div>
-        <div className="mt-4">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={Math.ceil(filteredRequests.length / itemsPerPage)}
-            onPageChange={setCurrentPage}
-            itemsPerPage={itemsPerPage}
-            totalItems={filteredRequests.length}
-          />
+        {/* Pagination */}
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 mt-6">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="flex items-center px-4 py-3 text-base text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-5 h-5 mr-2" />
+              <span>Précédent</span>
+            </button>
+            <span className="text-base text-black font-bold">
+              Page {currentPage} sur {Math.ceil(filteredRequests.length / itemsPerPage)}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredRequests.length / itemsPerPage)))}
+              disabled={currentPage === Math.ceil(filteredRequests.length / itemsPerPage)}
+              className="flex items-center px-4 py-3 text-base text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>Suivant</span>
+              <ChevronRight className="w-5 h-5 ml-2" />
+            </button>
+          </div>
         </div>
       </div>
       {ToastComponent}

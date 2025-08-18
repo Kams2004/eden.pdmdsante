@@ -335,7 +335,7 @@ const MobileCommissionAnalysis: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">
           <h1 className="text-xl font-semibold text-slate-800">Analyse des commissions</h1>
-          <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
+
           <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
         </div>
         <div className="px-4 py-8 flex items-center justify-center">
@@ -357,7 +357,7 @@ const MobileCommissionAnalysis: React.FC = () => {
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">
         <h1 className="text-xl font-semibold text-slate-800">Analyse des commissions</h1>
-        <p className="text-slate-500 text-sm mt-1">Au service de votre santé</p>
+
         <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
       </div>
       <div className="px-4 sm:px-6 py-4 bg-slate-50/50 border-b border-slate-200">

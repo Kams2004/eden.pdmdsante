@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, MessageSquare, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Search, Filter, MessageSquare, CheckCircle, XCircle, Clock, Trash2 } from 'lucide-react';
 import axiosInstance from '../../api/axioConfig'; // Import the configured axios instance
 
 interface Request {
@@ -28,6 +28,8 @@ const Requests: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all'); // Add type filter
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<number | null>(null);
   const itemsPerPage = 5;
 
   useEffect(() => {
@@ -94,6 +96,32 @@ const Requests: React.FC = () => {
     } catch (error) {
       console.error('Error rejecting request:', error);
     }
+  };
+
+  // New delete function separate from reject
+  const handleDelete = async (requestId: number) => {
+    setRequestToDelete(requestId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (requestToDelete) {
+      try {
+        await axiosInstance.delete(`/requete/del/${requestToDelete}`);
+        setRequests(requests.filter(request => request.id !== requestToDelete));
+        setShowDeleteModal(false);
+        setRequestToDelete(null);
+      } catch (error) {
+        console.error('Error deleting request:', error);
+        setShowDeleteModal(false);
+        setRequestToDelete(null);
+      }
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setRequestToDelete(null);
   };
 
   const getStatusIcon = (status: string) => {
@@ -241,7 +269,7 @@ const Requests: React.FC = () => {
             </div>
           ) : (
             currentRequests.map((request) => (
-              <div key={request.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div key={request.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow relative">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4">
                     <MessageSquare className="w-5 h-5 text-blue-500 mt-1" />
@@ -254,7 +282,7 @@ const Requests: React.FC = () => {
                       <p className="text-sm text-gray-500 mt-1">Email: {request.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 relative">
                     {getStatusIcon(request.status)}
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                       request.priority === 'high' ? 'bg-red-100 text-red-800' :
@@ -263,6 +291,14 @@ const Requests: React.FC = () => {
                     }`}>
                       {request.priority}
                     </span>
+                    {/* Delete icon positioned near the priority badge */}
+                    <button
+                      onClick={() => handleDelete(request.id)}
+                      className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors duration-200"
+                      title="Delete request"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
@@ -299,6 +335,37 @@ const Requests: React.FC = () => {
           />
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+              Delete Request
+            </h3>
+            <p className="text-gray-600 text-center mb-6">
+              Are you sure you want to delete this request? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
