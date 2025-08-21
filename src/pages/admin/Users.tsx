@@ -40,8 +40,8 @@ const Users: React.FC = () => {
       const response = await axiosInstance.get('/users/all');
       setUsers(response.data);
     } catch (error) {
-      console.error('Failed to fetch users:', error);
-      showNotification('Failed to fetch users', 'error');
+      console.error('Échec de la récupération des utilisateurs :', error);
+      showNotification('Échec de la récupération des utilisateurs', 'error');
     } finally {
       setLoading(false);
     }
@@ -64,14 +64,13 @@ const Users: React.FC = () => {
 
   const handleDelete = async () => {
     if (!userToDelete) return;
-
     try {
       await axiosInstance.delete(`/users/del/${userToDelete}`);
       setUsers(users.filter(user => user.id !== userToDelete));
-      showNotification('User deleted successfully', 'success');
+      showNotification('Utilisateur supprimé avec succès', 'success');
     } catch (error) {
-      console.error('Failed to delete user:', error);
-      showNotification('Failed to delete user', 'error');
+      console.error('Échec de la suppression de l\'utilisateur :', error);
+      showNotification('Échec de la suppression de l\'utilisateur', 'error');
     } finally {
       setShowDeleteModal(false);
       setUserToDelete(null);
@@ -104,7 +103,6 @@ const Users: React.FC = () => {
   const renderPageNumbers = () => {
     const pageNumbers = [];
     const maxVisiblePages = showAllPages ? totalPages : 5;
-
     for (let i = 1; i <= Math.min(maxVisiblePages, totalPages); i++) {
       pageNumbers.push(
         <button
@@ -118,7 +116,6 @@ const Users: React.FC = () => {
         </button>
       );
     }
-
     if (!showAllPages && totalPages > 5) {
       pageNumbers.push(
         <button
@@ -130,7 +127,6 @@ const Users: React.FC = () => {
         </button>
       );
     }
-
     if (showAllPages && totalPages > 5) {
       pageNumbers.push(
         <button
@@ -138,28 +134,26 @@ const Users: React.FC = () => {
           onClick={() => setShowAllPages(false)}
           className="px-3 py-1 rounded-lg border border-gray-300 text-sm"
         >
-          Show Less
+          Moins
         </button>
       );
     }
-
     return pageNumbers;
   };
 
   return (
     <div className="space-y-4 max-w-[1600px] mx-auto relative">
-      {/* Loading indicator */}
+      {/* Indicateur de chargement */}
       {loading && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
           <div className="flex items-center">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            <span className="text-sm">Loading users data...</span>
+            <span className="text-sm">Chargement des données des utilisateurs...</span>
           </div>
         </div>
       )}
-
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Users Management</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Gestion des utilisateurs</h1>
         <button
           onClick={() => {
             setModalMode('add');
@@ -168,16 +162,15 @@ const Users: React.FC = () => {
           className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600"
         >
           <Plus className="w-4 h-4" />
-          Add User
+          Ajouter un utilisateur
         </button>
       </div>
-
       <div className="bg-white rounded-xl shadow-sm p-6">
         <div className="flex justify-between items-center mb-6">
           <div className="relative w-64">
             <input
               type="text"
-              placeholder="Search users..."
+              placeholder="Rechercher des utilisateurs..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -185,15 +178,14 @@ const Users: React.FC = () => {
             <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           </div>
         </div>
-
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom d'utilisateur</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rôles</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -242,11 +234,10 @@ const Users: React.FC = () => {
             </tbody>
           </table>
         </div>
-
         {/* Pagination */}
         <div className="flex items-center justify-between mt-4 px-4">
           <div className="flex items-center text-sm text-gray-500">
-            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of {filteredUsers.length} entries
+            Affichage de {((currentPage - 1) * itemsPerPage) + 1} à {Math.min(currentPage * itemsPerPage, filteredUsers.length)} sur {filteredUsers.length} entrées
           </div>
           <div className="flex items-center space-x-2">
             <button
@@ -254,7 +245,7 @@ const Users: React.FC = () => {
               disabled={currentPage === 1}
               className="px-3 py-1 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
             >
-              Previous
+              Précédent
             </button>
             {renderPageNumbers()}
             <button
@@ -262,25 +253,22 @@ const Users: React.FC = () => {
               disabled={currentPage === totalPages}
               className="px-3 py-1 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
             >
-              Next
+              Suivant
             </button>
           </div>
         </div>
       </div>
-
-    <UserModal
-  isOpen={showModal}
-  onClose={() => {
-    setShowModal(false);
-    setEditingUser(null);
-  }}
-  initialData={editingUser}
-  mode={modalMode}
-  showNotification={showNotification}
-  onUserUpdate={handleUserUpdate}
-/>
-
-
+      <UserModal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingUser(null);
+        }}
+        initialData={editingUser}
+        mode={modalMode}
+        showNotification={showNotification}
+        onUserUpdate={handleUserUpdate}
+      />
       <DeleteConfirmationModal
         isOpen={showDeleteModal}
         onClose={() => {
@@ -288,9 +276,8 @@ const Users: React.FC = () => {
           setUserToDelete(null);
         }}
         onConfirm={handleDelete}
-        itemName="user"
+        itemName="utilisateur"
       />
-
       {notification && (
         <Notification
           message={notification.message}

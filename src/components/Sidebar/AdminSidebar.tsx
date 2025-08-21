@@ -10,13 +10,13 @@ interface AdminSidebarProps {
 }
 
 const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', id: 'dashboard' },
-  { icon: Users, label: 'Users', id: 'users' },
-  { icon: Shield, label: 'Roles', id: 'roles' },
-  { icon: UserMd, label: 'Doctors', id: 'doctors' },
-  { icon: Settings, label: 'Doctor Settings', id: 'doctor-settings' },
-  { icon: Calendar, label: 'Appointments', id: 'appointments' },
-  { icon: MessageSquare, label: 'Requests', id: 'requests' },
+  { icon: LayoutDashboard, label: 'Tableau de bord', id: 'dashboard' },
+  { icon: Users, label: 'Utilisateurs', id: 'users' },
+  { icon: Shield, label: 'Rôles', id: 'roles' },
+  { icon: UserMd, label: 'Médecins', id: 'doctors' },
+  // { icon: Settings, label: 'Paramètres médecin', id: 'doctor-settings' },
+  { icon: Calendar, label: 'Rendez-vous', id: 'appointments' },
+{ icon: MessageSquare, label: 'Requests', id: 'requests' }, 
 ];
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -48,12 +48,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </div>
           {isExpanded && (
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-700">Welcome,</p>
+              <p className="text-sm font-medium text-gray-700">Bienvenue,</p>
               <p className="text-sm text-gray-600">{displayName}</p>
             </div>
           )}
         </div>
-
         <nav className="space-y-2 flex-1">
           {menuItems.map((item) => (
             <button

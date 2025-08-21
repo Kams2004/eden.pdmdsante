@@ -1,6 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Save, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import axiosInstance from '../../../../api/axioConfig';
+import React, { useState, useEffect } from "react";
+import {
+  Save,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
+import axiosInstance from "../../../../api/axioConfig";
 
 interface PersonalInfo {
   firstName: string;
@@ -37,39 +44,50 @@ interface DoctorData {
   Speciality: string;
   id: number;
   user: number;
+  doctor_is_confirmed: boolean | null;
 }
 
-const PersonalInfoForm: React.FC = () => {
+interface PersonalInfoFormProps {
+  onProfileUpdate?: () => void;
+}
+
+const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalType, setModalType] = useState<"success" | "error">("success");
+  const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
   const [formData, setFormData] = useState<PersonalInfo>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    dateOfBirth: '',
-    placeOfBirth: '',
-    nationality: '',
-    cni: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    dateOfBirth: "",
+    placeOfBirth: "",
+    nationality: "",
+    cni: "",
   });
+
   const [doctorData, setDoctorData] = useState<DoctorInfo>({
-    doctorNO: '',
-    speciality: '',
-    doctorFederationID: '',
-    doctorPhone: '',
-    doctorPhone2: '',
+    doctorNO: "",
+    speciality: "",
+    doctorFederationID: "",
+    doctorPhone: "",
+    doctorPhone2: "",
   });
 
   const totalSteps = 2;
 
   const getDoctorId = () => {
     try {
-      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const userData = JSON.parse(localStorage.getItem("userData") || "{}");
       return userData.doctor_id || userData.id || userData.user_id;
     } catch (error) {
-      console.error('Erreur lors de la récupération de l\'ID du médecin :', error);
+      console.error("Erreur lors de la récupération de l'ID du médecin :", error);
       return null;
     }
   };
@@ -78,7 +96,7 @@ const PersonalInfoForm: React.FC = () => {
     const fetchDoctorInfo = async () => {
       const doctorId = getDoctorId();
       if (!doctorId) {
-        setError('ID du médecin non trouvé');
+        setError("ID non trouvé");
         setIsLoading(false);
         return;
       }
@@ -87,70 +105,93 @@ const PersonalInfoForm: React.FC = () => {
         setError(null);
         const response = await axiosInstance.get<DoctorData>(`/doctors/informations/${doctorId}`);
         const doctorData = response.data;
-
+        const isComplete = doctorData.doctor_is_confirmed === true;
+        setIsProfileIncomplete(!isComplete);
         const formatDate = (dateString: string | null): string => {
-          if (!dateString) return '';
+          if (!dateString) return "";
           const date = new Date(dateString);
           const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
           return `${year}-${month}-${day}`;
         };
-
         setFormData({
-          firstName: doctorData.DoctorName || '',
-          lastName: doctorData.DoctorLastname || '',
-          email: doctorData.DoctorEmail || '',
+          firstName: doctorData.DoctorName || "",
+          lastName: doctorData.DoctorLastname || "",
+          email: doctorData.DoctorEmail || "",
           dateOfBirth: formatDate(doctorData.DoctorDOB),
-          placeOfBirth: doctorData.DoctorPOB || '',
-          nationality: doctorData.DoctorNat || '',
-          cni: doctorData.DoctorCNI || '',
+          placeOfBirth: doctorData.DoctorPOB || "",
+          nationality: doctorData.DoctorNat || "",
+          cni: doctorData.DoctorCNI || "",
         });
-
         setDoctorData({
-          doctorNO: doctorData.DoctorNO || '',
-          speciality: doctorData.Speciality || '',
-          doctorFederationID: doctorData.DoctorFederationID || '',
-          doctorPhone: doctorData.DoctorPhone || '',
-          doctorPhone2: doctorData.DoctorPhone2 || '',
+          doctorNO: doctorData.DoctorNO || "",
+          speciality: doctorData.Speciality || "",
+          doctorFederationID: doctorData.DoctorFederationID || "",
+          doctorPhone: doctorData.DoctorPhone || "",
+          doctorPhone2: doctorData.DoctorPhone2 || "",
         });
       } catch (error) {
-        console.error('Erreur lors de la récupération des informations du médecin :', error);
-        setError('Échec du chargement des informations du médecin');
+        console.error("Erreur lors de la récupération des informations :", error);
+        setError("Échec du chargement des informations");
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchDoctorInfo();
   }, []);
 
-  useEffect(() => {
-    if (showSuccessModal) {
-      const timer = setTimeout(() => {
-        setShowSuccessModal(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showSuccessModal]);
+  const validateStep = (): boolean => {
+    const errors: Record<string, string> = {};
 
-  const handleInputChange = (field: keyof PersonalInfo | keyof DoctorInfo, value: string, isDoctorInfo: boolean = false) => {
+    if (currentStep === 1) {
+      if (!formData.firstName) errors.firstName = "Prénom est requis";
+      if (!formData.lastName) errors.lastName = "Nom est requis";
+      if (!formData.email) errors.email = "Email est requis";
+      if (!formData.dateOfBirth) errors.dateOfBirth = "Date de Naissance est requise";
+      if (!formData.placeOfBirth) errors.placeOfBirth = "Lieu de Naissance est requis";
+      if (!formData.nationality) errors.nationality = "Nationalité est requise";
+      if (!formData.cni) errors.cni = "CNI est requise";
+    } else {
+      if (!doctorData.doctorNO) errors.doctorNO = "Numéro de Médecin est requis";
+      if (!doctorData.speciality) errors.speciality = "Spécialité est requise";
+      if (!doctorData.doctorFederationID) errors.doctorFederationID = "ID de Fédération est requis";
+      if (!doctorData.doctorPhone) errors.doctorPhone = "Téléphone est requis";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleInputChange = (
+    field: keyof PersonalInfo | keyof DoctorInfo,
+    value: string,
+    isDoctorInfo: boolean = false
+  ) => {
     if (isDoctorInfo) {
-      setDoctorData(prev => ({
+      setDoctorData((prev) => ({
         ...prev,
-        [field]: value,
+        [field as keyof DoctorInfo]: value,
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [field]: value,
+        [field as keyof PersonalInfo]: value,
       }));
     }
+
+    // Réinitialiser l'erreur pour ce champ
+    setFormErrors((prev) => ({
+      ...prev,
+      [field]: "",
+    }));
   };
 
   const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+    if (validateStep()) {
+      if (currentStep < totalSteps) {
+        setCurrentStep(currentStep + 1);
+      }
     }
   };
 
@@ -160,15 +201,11 @@ const PersonalInfoForm: React.FC = () => {
     }
   };
 
-  const handleSave = async () => {
-    const doctorId = getDoctorId();
-    if (!doctorId) {
-      setError('ID du médecin non trouvé');
-      return;
-    }
+  const confirmAndUpdateDoctor = async (doctorId: number) => {
     try {
-      setIsSaving(true);
-      setError(null);
+      // Étape 1: Confirmer le médecin
+      await axiosInstance.put(`/doctors/confirm/${doctorId}`);
+      // Étape 2: Mettre à jour les informations
       const updateData = {
         DoctorName: formData.firstName,
         DoctorLastname: formData.lastName,
@@ -183,14 +220,54 @@ const PersonalInfoForm: React.FC = () => {
         DoctorPhone: doctorData.doctorPhone,
         DoctorPhone2: doctorData.doctorPhone2,
       };
-      await axiosInstance.put(`/doctors/update/${doctorId}`, updateData);
-      setShowSuccessModal(true);
+      const response = await axiosInstance.put(`/doctors/update/${doctorId}`, updateData);
+      return response.data;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour des informations du médecin :', error);
-      setError('Échec de la mise à jour des informations du médecin');
+      console.error("Erreur lors de la mise à jour des informations :", error);
+      throw new Error("Échec de la mise à jour des informations");
+    }
+  };
+
+  const handleSave = async () => {
+    if (!validateStep()) {
+      return;
+    }
+
+    const doctorId = getDoctorId();
+    if (!doctorId) {
+      setError("ID non trouvé");
+      return;
+    }
+    try {
+      setIsSaving(true);
+      setError(null);
+      const updateResponse = await confirmAndUpdateDoctor(doctorId);
+      if (updateResponse && updateResponse.Doctor) {
+        localStorage.setItem("doctorData", JSON.stringify(updateResponse.Doctor));
+        localStorage.setItem("isProfileComplete", "true");
+        localStorage.removeItem("showSettingsFirst");
+        // Afficher la modale de succès
+        setModalType("success");
+        setModalMessage("Les informations ont été mises à jour avec succès !");
+        setShowResultModal(true);
+        setIsProfileIncomplete(false);
+        if (onProfileUpdate) {
+          onProfileUpdate();
+        }
+      }
+    } catch (error: any) {
+      // Afficher la modale d'erreur
+      setModalType("error");
+      setModalMessage(error.message || "Une erreur est survenue lors de la mise à jour des informations.");
+      setShowResultModal(true);
+      console.error("Erreur:", error);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const closeResultModal = () => {
+    setShowResultModal(false);
   };
 
   return (
@@ -200,7 +277,7 @@ const PersonalInfoForm: React.FC = () => {
           <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
             <div className="flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              <span className="text-sm">Chargement des informations du médecin...</span>
+              <span className="text-sm">Chargement des informations...</span>
             </div>
           </div>
         )}
@@ -209,9 +286,28 @@ const PersonalInfoForm: React.FC = () => {
             {error}
           </div>
         )}
-        {showSuccessModal && (
-          <div className="fixed top-30 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded shadow-lg">
-            Informations du médecin mises à jour avec succès !
+        {isProfileIncomplete && (
+          <div className="bg-orange-50 border-l-4 border-orange-500 text-orange-700 p-4 mb-6 rounded-md shadow-sm flex items-start">
+            <div className="mr-3 mt-1">
+              <svg
+                className="h-5 w-5 text-orange-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div>
+              <p className="font-medium">
+                Veuillez compléter vos informations avant d'accéder aux autres sections.
+              </p>
+            </div>
           </div>
         )}
         {/* Indicateur d'Étape */}
@@ -222,10 +318,10 @@ const PersonalInfoForm: React.FC = () => {
                 key={step}
                 className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
                   step === currentStep
-                    ? 'bg-blue-500 text-white shadow-lg'
+                    ? "bg-blue-500 text-white shadow-lg"
                     : step < currentStep
-                    ? 'bg-blue-200 text-blue-700'
-                    : 'bg-gray-200 text-gray-500'
+                    ? "bg-blue-200 text-blue-700"
+                    : "bg-gray-200 text-gray-500"
                 }`}
               >
                 {step}
@@ -254,7 +350,7 @@ const PersonalInfoForm: React.FC = () => {
             <div className="flex items-center mb-8">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mr-3 shadow-md"></div>
               <h2 className="text-2xl font-semibold text-gray-900">
-                {currentStep === 1 ? 'Informations Personnelles' : 'Informations du Médecin'}
+                {currentStep === 1 ? "Informations Personnelles" : "Informations Professionnelles"}
               </h2>
             </div>
             {currentStep === 1 ? (
@@ -268,11 +364,16 @@ const PersonalInfoForm: React.FC = () => {
                     <input
                       type="text"
                       value={formData.firstName}
-                      onChange={(e) => handleInputChange('firstName', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                      onChange={(e) => handleInputChange("firstName", e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                        formErrors.firstName ? "border-red-500" : "border-gray-300"
+                      }`}
                       placeholder="Entrez votre prénom"
                       disabled={isLoading}
                     />
+                    {formErrors.firstName && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.firstName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -281,11 +382,16 @@ const PersonalInfoForm: React.FC = () => {
                     <input
                       type="text"
                       value={formData.lastName}
-                      onChange={(e) => handleInputChange('lastName', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                      onChange={(e) => handleInputChange("lastName", e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                        formErrors.lastName ? "border-red-500" : "border-gray-300"
+                      }`}
                       placeholder="Entrez votre nom"
                       disabled={isLoading}
                     />
+                    {formErrors.lastName && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.lastName}</p>
+                    )}
                   </div>
                 </div>
                 {/* Email et Date de Naissance */}
@@ -297,11 +403,16 @@ const PersonalInfoForm: React.FC = () => {
                     <input
                       type="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                        formErrors.email ? "border-red-500" : "border-gray-300"
+                      }`}
                       placeholder="Entrez votre email"
                       disabled={isLoading}
                     />
+                    {formErrors.email && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.email}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -310,11 +421,16 @@ const PersonalInfoForm: React.FC = () => {
                     <input
                       type="date"
                       value={formData.dateOfBirth}
-                      onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                      onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                        formErrors.dateOfBirth ? "border-red-500" : "border-gray-300"
+                      }`}
                       placeholder="jj/mm/aaaa"
                       disabled={isLoading}
                     />
+                    {formErrors.dateOfBirth && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.dateOfBirth}</p>
+                    )}
                   </div>
                 </div>
                 {/* Lieu de Naissance et Nationalité */}
@@ -326,11 +442,16 @@ const PersonalInfoForm: React.FC = () => {
                     <input
                       type="text"
                       value={formData.placeOfBirth}
-                      onChange={(e) => handleInputChange('placeOfBirth', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                      onChange={(e) => handleInputChange("placeOfBirth", e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                        formErrors.placeOfBirth ? "border-red-500" : "border-gray-300"
+                      }`}
                       placeholder="Entrez votre lieu de naissance"
                       disabled={isLoading}
                     />
+                    {formErrors.placeOfBirth && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.placeOfBirth}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -339,11 +460,16 @@ const PersonalInfoForm: React.FC = () => {
                     <input
                       type="text"
                       value={formData.nationality}
-                      onChange={(e) => handleInputChange('nationality', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                      onChange={(e) => handleInputChange("nationality", e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                        formErrors.nationality ? "border-red-500" : "border-gray-300"
+                      }`}
                       placeholder="Entrez votre nationalité"
                       disabled={isLoading}
                     />
+                    {formErrors.nationality && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.nationality}</p>
+                    )}
                   </div>
                 </div>
                 {/* CNI */}
@@ -354,16 +480,21 @@ const PersonalInfoForm: React.FC = () => {
                   <input
                     type="text"
                     value={formData.cni}
-                    onChange={(e) => handleInputChange('cni', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                    onChange={(e) => handleInputChange("cni", e.target.value)}
+                    className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                      formErrors.cni ? "border-red-500" : "border-gray-300"
+                    }`}
                     placeholder="Entrez votre numéro de CNI"
                     disabled={isLoading}
                   />
+                  {formErrors.cni && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors.cni}</p>
+                  )}
                 </div>
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Champs d'Informations du Médecin */}
+                {/* Champs d'Informations Professionnelles */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Numéro de Médecin
@@ -371,11 +502,16 @@ const PersonalInfoForm: React.FC = () => {
                   <input
                     type="text"
                     value={doctorData.doctorNO}
-                    onChange={(e) => handleInputChange('doctorNO', e.target.value, true)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                    onChange={(e) => handleInputChange("doctorNO", e.target.value, true)}
+                    className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                      formErrors.doctorNO ? "border-red-500" : "border-gray-300"
+                    }`}
                     placeholder="Entrez votre numéro de médecin"
                     disabled={isLoading}
                   />
+                  {formErrors.doctorNO && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors.doctorNO}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -384,47 +520,62 @@ const PersonalInfoForm: React.FC = () => {
                   <input
                     type="text"
                     value={doctorData.speciality}
-                    onChange={(e) => handleInputChange('speciality', e.target.value, true)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                    onChange={(e) => handleInputChange("speciality", e.target.value, true)}
+                    className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                      formErrors.speciality ? "border-red-500" : "border-gray-300"
+                    }`}
                     placeholder="Entrez votre spécialité"
                     disabled={isLoading}
                   />
+                  {formErrors.speciality && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors.speciality}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ID de Fédération du Médecin
+                    ID de Fédération
                   </label>
                   <input
                     type="text"
                     value={doctorData.doctorFederationID}
-                    onChange={(e) => handleInputChange('doctorFederationID', e.target.value, true)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
-                    placeholder="Entrez votre ID de fédération du médecin"
+                    onChange={(e) => handleInputChange("doctorFederationID", e.target.value, true)}
+                    className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                      formErrors.doctorFederationID ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Entrez votre ID de fédération"
                     disabled={isLoading}
                   />
+                  {formErrors.doctorFederationID && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors.doctorFederationID}</p>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Téléphone du Médecin
+                      Téléphone
                     </label>
                     <input
                       type="text"
                       value={doctorData.doctorPhone}
-                      onChange={(e) => handleInputChange('doctorPhone', e.target.value, true)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                      onChange={(e) => handleInputChange("doctorPhone", e.target.value, true)}
+                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                        formErrors.doctorPhone ? "border-red-500" : "border-gray-300"
+                      }`}
                       placeholder="Entrez votre numéro de téléphone"
                       disabled={isLoading}
                     />
+                    {formErrors.doctorPhone && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.doctorPhone}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Téléphone du Médecin 2
+                      Téléphone 2
                     </label>
                     <input
                       type="text"
                       value={doctorData.doctorPhone2}
-                      onChange={(e) => handleInputChange('doctorPhone2', e.target.value, true)}
+                      onChange={(e) => handleInputChange("doctorPhone2", e.target.value, true)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
                       placeholder="Entrez votre second numéro de téléphone"
                       disabled={isLoading}
@@ -475,6 +626,34 @@ const PersonalInfoForm: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* Modale de résultat */}
+      {showResultModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
+            <div className="flex justify-center mb-4">
+              {modalType === "success" && (
+                <CheckCircle2 className="h-12 w-12 text-green-500" />
+              )}
+              {modalType === "error" && (
+                <XCircle className="h-12 w-12 text-red-500" />
+              )}
+            </div>
+            <h3 className="text-lg font-medium text-center mb-2">
+              {modalType === "success" && "Succès"}
+              {modalType === "error" && "Erreur"}
+            </h3>
+            <p className="text-gray-600 text-center mb-6">{modalMessage}</p>
+            <div className="flex justify-center">
+              <button
+                onClick={closeResultModal}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

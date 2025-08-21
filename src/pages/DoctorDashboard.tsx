@@ -34,13 +34,14 @@ interface DoctorData {
   Speciality: string;
   id: number;
   user: number;
+  doctor_is_confirmed: boolean | null;
 }
 
 function DoctorDashboard() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showLanguages, setShowLanguages] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
-  const [selectedPatients, setSelectedPatients] = useState([]);
+  const [setSelectedPatients] = useState([]);
   const [showAllCommissions, setShowAllCommissions] = useState(false);
   const [showTodaysCommissions, setShowTodaysCommissions] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(true);
@@ -49,19 +50,9 @@ function DoctorDashboard() {
   const windowSize = useWindowSize();
   const isMobile = windowSize.width < 768;
 
+  // Fixed function to properly check doctor profile completion
   const checkDoctorProfileComplete = (doctorData: DoctorData): boolean => {
-    const requiredFields = [
-      doctorData.DoctorName,
-      doctorData.DoctorLastname,
-      doctorData.DoctorEmail,
-      doctorData.DoctorCNI,
-      doctorData.DoctorNO,
-      doctorData.Speciality,
-      doctorData.DoctorPhone
-    ];
-
-    return requiredFields.every(field => field && field.trim() !== '') && 
-           doctorData.ModifiedAt !== null;
+    return doctorData.doctor_is_confirmed === true;
   };
 
   useEffect(() => {
@@ -73,40 +64,27 @@ function DoctorDashboard() {
 
     try {
       const userData = JSON.parse(userDataString);
-      const userRoles = userData.roles?.map((role) => role.name.toLowerCase()) || [];
+      const userRoles = userData.roles?.map((role: { name: string }) => role.name.toLowerCase()) || [];
       
       if (!userRoles.includes('doctor')) {
         navigate('/login');
         return;
       }
 
-      // Check if we need to show settings first
-      const showSettingsFirst = localStorage.getItem('showSettingsFirst');
-      const storedProfileComplete = localStorage.getItem('isProfileComplete');
       const doctorDataString = localStorage.getItem('doctorData');
-      
-      if (showSettingsFirst === 'true' || storedProfileComplete === 'false') {
-        setIsProfileComplete(false);
-        setCurrentView('settings');
-        setShowProfileWarning(true);
-        
-        // If we have doctor data, double-check the profile completion
-        if (doctorDataString) {
-          try {
-            const doctorData: DoctorData = JSON.parse(doctorDataString);
-            const profileComplete = checkDoctorProfileComplete(doctorData);
-            setIsProfileComplete(profileComplete);
-            
-            if (profileComplete) {
-              // If profile is actually complete, remove the flags
-              localStorage.removeItem('showSettingsFirst');
-              localStorage.setItem('isProfileComplete', 'true');
-              setShowProfileWarning(false);
-              setCurrentView('dashboard');
-            }
-          } catch (error) {
-            console.error('Error parsing doctor data:', error);
+      if (doctorDataString) {
+        try {
+          const doctorData = JSON.parse(doctorDataString);
+          // Use the fixed function to check profile completion
+          const isComplete = checkDoctorProfileComplete(doctorData);
+          setIsProfileComplete(isComplete);
+          
+          if (!isComplete) {
+            setCurrentView('settings');
+            setShowProfileWarning(true);
           }
+        } catch (error) {
+          console.error('Error parsing doctor data:', error);
         }
       }
     } catch (error) {
@@ -115,28 +93,26 @@ function DoctorDashboard() {
     }
   }, [navigate]);
 
-  const handleMenuClick = (view) => {
+  const handleMenuClick = (view: string) => {
     // Prevent navigation if profile is incomplete
     if (!isProfileComplete && view.toLowerCase() !== 'settings') {
       setShowProfileWarning(true);
       return;
     }
-
     setCurrentView(view.toLowerCase());
     setShowProfileWarning(false);
-    
+        
     if (view.toLowerCase() !== 'patients') {
       setSelectedPatients([]);
     }
   };
 
-  const handleDetailsClick = (patients) => {
+  const handleDetailsClick = (patients: any) => {
     // Prevent navigation if profile is incomplete
     if (!isProfileComplete) {
       setShowProfileWarning(true);
       return;
     }
-
     setSelectedPatients(patients);
     setCurrentView('patients');
   };
@@ -174,10 +150,10 @@ function DoctorDashboard() {
 
   return (
     <div className="min-h-screen bg-cover bg-center" style={{ 
-      backgroundColor: '#002b36', 
-      backgroundImage: `url(${backgroundImage})`, 
-      backgroundRepeat: 'no-repeat', 
-      backgroundSize: 'cover' 
+      backgroundColor: '#002b36',
+      backgroundImage: `url(${backgroundImage})`,
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'cover'
     }}>
       {isMobile ? (
         <MobileDoctorDashboard />
@@ -213,9 +189,9 @@ function DoctorDashboard() {
 
           <div className={`pt-24 px-4 pb-4 flex flex-col md:flex-row ${showProfileWarning && !isProfileComplete ? 'pt-36' : ''}`}>
             <Sidebar 
-              isExpanded={isExpanded} 
-              setIsExpanded={setIsExpanded} 
-              onMenuClick={handleMenuClick} 
+              isExpanded={isExpanded}
+              setIsExpanded={setIsExpanded}
+              onMenuClick={handleMenuClick}
               currentView={currentView}
               isProfileComplete={isProfileComplete}
             />
@@ -224,19 +200,19 @@ function DoctorDashboard() {
               <div className="h-full overflow-y-auto no-scrollbar">
                 {currentView === 'dashboard' && isProfileComplete && (
                   <div className="grid grid-cols-1 gap-4">
-                    <CommissionOverview 
-                      commissionData={commissionData} 
-                      showAmount={showAllCommissions} 
-                      setShowAmount={setShowAllCommissions} 
+                    <CommissionOverview
+                      commissionData={commissionData}
+                      showAmount={showAllCommissions}
+                      setShowAmount={setShowAllCommissions}
                     />
-                    <StatCards 
-                      showAmount={showTodaysCommissions} 
-                      setShowAmount={setShowTodaysCommissions} 
-                      stats={{ 
-                        commission: { amount: 15750, count: 25, transactions: 42 }, 
-                        patients: { total: 150, percentage: 75 }, 
-                        examinations: { total: 85, percentage: 60 } 
-                      }} 
+                    <StatCards
+                      showAmount={showTodaysCommissions}
+                      setShowAmount={setShowTodaysCommissions}
+                      stats={{
+                        commission: { amount: 15750, count: 25, transactions: 42 },
+                        patients: { total: 150, percentage: 75 },
+                        examinations: { total: 85, percentage: 60 }
+                      }}
                     />
                     <Actualities />
                     <PatientsList onDetailsClick={handleDetailsClick} />
@@ -244,7 +220,7 @@ function DoctorDashboard() {
                 )}
                 
                 {currentView === 'patients' && isProfileComplete && (
-                  <PatientsView  />
+                  <PatientsView />
                 )}
                 {currentView === 'request' && isProfileComplete && <RequestsView />}
                 {currentView === 'commissions' && isProfileComplete && <CommissionView />}

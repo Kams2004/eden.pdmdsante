@@ -7,12 +7,14 @@ interface SidebarProps {
   setIsExpanded: (expanded: boolean) => void;
   onMenuClick: (view: string) => void;
   currentView: string;
+  isProfileComplete: boolean;
 }
+
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Tableau de bord', key: 'dashboard' },
   { icon: User, label: 'Patients', key: 'patients' },
-  { icon: FileText, label: 'Demandes', key: 'request' },
+  { icon: FileText, label: 'Requests', key: 'request' },
   { icon: DollarSign, label: 'Commissions', key: 'commissions' },
   { icon: BarChart2, label: 'Analyse commissions', key: 'commissionAnalysis' },
   { icon: Settings, label: 'Paramètres', key: 'settings' }
@@ -23,6 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   setIsExpanded,
   onMenuClick,
   currentView,
+    isProfileComplete,
 }) => {
   const userData = getUserFromStorage();
   const initials = userData ? getUserInitials(userData.firstName, userData.lastName) : 'US';

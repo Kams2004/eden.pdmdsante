@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import pdmdLogo from "./pdmd.png";
 import imgBackground from "./img.png";
 import axios, { AxiosError } from 'axios';
@@ -18,19 +18,16 @@ const LandingPage = () => {
     setError("");
     setSuccessMessage("");
     setLoading(true);
-
     if (!id) {
       setError("Veuillez entrer un Matricule ou ID de fédération valide.");
       setTimeout(() => setError(""), 3000);
       setLoading(false);
       return;
     }
-
     try {
       const response = await axios.post(`${BASE_URL}/users/send_email/`, {
         federation_id: id
       });
-
       if (response.data.Message === "Identifiants Envoyés avec succès") {
         setSuccessMessage("Envoyé avec succès. Vous recevrez un e-mail contenant vos identifiants de connexion.");
         setTimeout(() => {
@@ -76,6 +73,11 @@ const LandingPage = () => {
             onChange={(e) => setId(e.target.value)}
             required
           />
+          <div className="w-full text-right">
+            <p className="text-sm text-gray-600">
+              Identifiant reçu ? <Link to="/login" className="text-blue-600 hover:underline">Veuillez vous connecter</Link>
+            </p>
+          </div>
           <button
             type="submit"
             disabled={loading}

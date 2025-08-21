@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, MessageSquare, CheckCircle, XCircle, Clock, Trash2 } from 'lucide-react';
-import axiosInstance from '../../api/axioConfig'; // Import the configured axios instance
+import axiosInstance from '../../api/axioConfig';
 
 interface Request {
   id: number;
@@ -25,7 +25,7 @@ interface Request {
 const Requests: React.FC = () => {
   const [requests, setRequests] = useState<Request[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all'); // Add type filter
+  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -44,30 +44,29 @@ const Requests: React.FC = () => {
         }));
         setRequests(formattedRequests);
       } catch (error) {
-        console.error('Error fetching requests:', error);
+        console.error('Erreur lors de la récupération des demandes :', error);
       }
     };
-
     fetchRequests();
   }, []);
 
   const determineRequestType = (req: Request) => {
-    if (req.connection) return 'Demande de Connexion';
-    if (req.commission) return 'Commission Mismatch';
-    if (req.revendication_examen) return 'Patient Record Issue';
-    if (req.suggestion) return 'Payment Delay';
-    if (req.error) return 'System Error';
-    if (req.administration) return 'Administrative Request';
-    return 'Unknown Request';
+    if (req.connection) return 'Demande de connexion';
+    if (req.commission) return 'Incohérence de commission';
+    if (req.revendication_examen) return 'Problème de dossier patient';
+    if (req.suggestion) return 'Retard de paiement';
+    if (req.error) return 'Erreur système';
+    if (req.administration) return 'Demande administrative';
+    return 'Demande inconnue';
   };
 
   const determinePriority = (req: Request) => {
     const type = determineRequestType(req);
     switch (type) {
-      case 'System Error':
+      case 'Erreur système':
         return 'high';
-      case 'Commission Mismatch':
-      case 'Patient Record Issue':
+      case 'Incohérence de commission':
+      case 'Problème de dossier patient':
         return 'medium';
       default:
         return 'low';
@@ -85,7 +84,7 @@ const Requests: React.FC = () => {
         ));
       }
     } catch (error) {
-      console.error('Error approving request:', error);
+      console.error('Erreur lors de l\'approbation de la demande :', error);
     }
   };
 
@@ -94,11 +93,10 @@ const Requests: React.FC = () => {
       await axiosInstance.delete(`/requete/del/${requestId}`);
       setRequests(requests.filter(request => request.id !== requestId));
     } catch (error) {
-      console.error('Error rejecting request:', error);
+      console.error('Erreur lors du rejet de la demande :', error);
     }
   };
 
-  // New delete function separate from reject
   const handleDelete = async (requestId: number) => {
     setRequestToDelete(requestId);
     setShowDeleteModal(true);
@@ -112,7 +110,7 @@ const Requests: React.FC = () => {
         setShowDeleteModal(false);
         setRequestToDelete(null);
       } catch (error) {
-        console.error('Error deleting request:', error);
+        console.error('Erreur lors de la suppression de la demande :', error);
         setShowDeleteModal(false);
         setRequestToDelete(null);
       }
@@ -135,7 +133,6 @@ const Requests: React.FC = () => {
     }
   };
 
-  // Get unique request types for the filter dropdown
   const getUniqueRequestTypes = () => {
     const types = requests.map(request => request.type);
     return [...new Set(types)].sort();
@@ -149,7 +146,7 @@ const Requests: React.FC = () => {
       request.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
       `${request.first_name} ${request.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesStatus && matchesType && matchesSearch;
   });
 
@@ -200,48 +197,45 @@ const Requests: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Requests Management</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Gestion des demandes</h1>
         <div className="flex gap-2">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="resolved">Resolved</option>
-            <option value="rejected">Rejected</option>
+            <option value="all">Tous les statuts</option>
+            <option value="pending">En attente</option>
+            <option value="resolved">Résolues</option>
+            <option value="rejected">Rejetées</option>
           </select>
-          
-          {/* Add Type Filter */}
+
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">All Types</option>
+            <option value="all">Tous les types</option>
             {getUniqueRequestTypes().map((type) => (
               <option key={type} value={type}>{type}</option>
             ))}
           </select>
         </div>
       </div>
-
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="flex justify-between items-center mb-6">
           <div className="relative w-64">
             <input
               type="text"
-              placeholder="Search requests..."
+              placeholder="Rechercher des demandes..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           </div>
-          
-          {/* Clear Filters Button */}
-          <button 
+
+          <button
             onClick={() => {
               setStatusFilter('all');
               setTypeFilter('all');
@@ -251,21 +245,19 @@ const Requests: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             <Filter className="w-4 h-4" />
-            Clear Filters
+            Réinitialiser les filtres
           </button>
         </div>
 
-        {/* Results Summary */}
         <div className="mb-4 text-sm text-gray-500">
-          Showing {currentRequests.length} of {filteredRequests.length} requests
-          {filteredRequests.length !== requests.length && ` (filtered from ${requests.length} total)`}
+          Affichage de {currentRequests.length} sur {filteredRequests.length} demandes
+          {filteredRequests.length !== requests.length && ` (filtrées depuis ${requests.length} au total)`}
         </div>
-
         <div className="space-y-4 mb-4">
           {currentRequests.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>No requests found matching your criteria.</p>
+              <p>Aucune demande ne correspond à vos critères.</p>
             </div>
           ) : (
             currentRequests.map((request) => (
@@ -277,9 +269,9 @@ const Requests: React.FC = () => {
                       <h3 className="text-lg font-semibold text-gray-800">{request.type}</h3>
                       <p className="text-sm text-gray-600 mt-1">{request.message}</p>
                       <p className="text-sm text-gray-500 mt-2">
-                        From: {(request.commission || request.error || request.revendication_examen) ? `Dr. ${request.first_name} ${request.last_name}` : `${request.first_name} ${request.last_name}`}
+                        De : {(request.commission || request.error || request.revendication_examen) ? `Dr. ${request.first_name} ${request.last_name}` : `${request.first_name} ${request.last_name}`}
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">Email: {request.email}</p>
+                      <p className="text-sm text-gray-500 mt-1">Email : {request.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4 relative">
@@ -289,36 +281,36 @@ const Requests: React.FC = () => {
                       request.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-green-100 text-green-800'
                     }`}>
-                      {request.priority}
+                      {request.priority === 'high' ? 'Élevée' :
+                       request.priority === 'medium' ? 'Moyenne' :
+                       'Faible'}
                     </span>
-                    {/* Delete icon positioned near the priority badge */}
                     <button
                       onClick={() => handleDelete(request.id)}
                       className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors duration-200"
-                      title="Delete request"
+                      title="Supprimer la demande"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-                  <span>Created: {request.CreatedAt || 'N/A'}</span>
-                  <span>Last Updated: {request.UpdateAt || 'N/A'}</span>
+                  <span>Créée le : {request.CreatedAt || 'N/A'}</span>
+                  <span>Dernière mise à jour : {request.UpdateAt || 'N/A'}</span>
                 </div>
-
                 {request.status === 'pending' && (
                   <div className="mt-4 flex justify-end space-x-2">
                     <button
                       onClick={() => handleApprove(request.id)}
                       className="px-4 py-2 text-sm text-white bg-green-500 rounded-lg hover:bg-green-600"
                     >
-                      Approve
+                      Approuver
                     </button>
                     <button
                       onClick={() => handleReject(request.id)}
                       className="px-4 py-2 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600"
                     >
-                      Reject
+                      Rejeter
                     </button>
                   </div>
                 )}
@@ -326,7 +318,6 @@ const Requests: React.FC = () => {
             ))
           )}
         </div>
-
         {totalPages > 1 && (
           <Pagination
             currentPage={currentPage}
@@ -336,7 +327,6 @@ const Requests: React.FC = () => {
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
@@ -344,23 +334,23 @@ const Requests: React.FC = () => {
               <Trash2 className="w-6 h-6 text-red-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
-              Delete Request
+              Supprimer la demande
             </h3>
             <p className="text-gray-600 text-center mb-6">
-              Are you sure you want to delete this request? This action cannot be undone.
+              Êtes-vous sûr de vouloir supprimer cette demande ? Cette action est irréversible.
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={cancelDelete}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                Cancel
+                Annuler
               </button>
               <button
                 onClick={confirmDelete}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
-                Delete
+                Supprimer
               </button>
             </div>
           </div>

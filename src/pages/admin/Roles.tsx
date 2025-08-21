@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Search, Shield, Check, X } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import axiosInstance from '../../api/axioConfig';
-import loadingImage from './image.png'; // Import the image
+import loadingImage from './image.png';
 
 interface Role {
   id: number;
@@ -36,7 +36,6 @@ const Roles: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
-
   const addRoleInputRef = useRef<HTMLDivElement>(null);
   const addRoleButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -48,10 +47,8 @@ const Roles: React.FC = () => {
           axiosInstance.get(`${BASE_URL}/roles/`),
           axiosInstance.get(`${BASE_URL}/users/all`)
         ]);
-
         const rolesData = rolesResponse.data;
         const usersData = usersResponse.data;
-
         const rolesWithCounts = rolesData.map((role: any) => ({
           id: role.id,
           name: role.name,
@@ -60,15 +57,13 @@ const Roles: React.FC = () => {
           ).length,
           createdAt: new Date().toISOString().split('T')[0]
         }));
-
         setRoles(rolesWithCounts);
       } catch (err) {
-        console.error('Failed to fetch data:', err);
+        console.error('Échec du chargement des données :', err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
@@ -93,7 +88,6 @@ const Roles: React.FC = () => {
         }
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -102,39 +96,35 @@ const Roles: React.FC = () => {
 
   const handleAddRole = async () => {
     if (!newRoleName.trim()) return;
-
     try {
       const response = await axiosInstance.post(`${BASE_URL}/roles/add`, {
         name: newRoleName
       });
-
       const newRole = {
         id: response.data.id,
         name: newRoleName,
         usersCount: 0,
         createdAt: new Date().toISOString().split('T')[0]
       };
-
       setRoles([...roles, newRole]);
       setNewRoleName('');
       setShowAddInput(false);
-      showNotification('Role created successfully', 'success');
+      showNotification('Rôle créé avec succès', 'success');
     } catch (err) {
-      showNotification('Failed to create role', 'error');
+      showNotification('Échec de la création du rôle', 'error');
     }
   };
 
   const handleDeleteRole = async () => {
     if (!roleToDelete) return;
-
     try {
       await axiosInstance.delete(`${BASE_URL}/roles/del/${roleToDelete}`);
       setRoles(roles.filter(role => role.id !== roleToDelete));
       setShowDeleteModal(false);
       setRoleToDelete(null);
-      showNotification('Role deleted successfully', 'success');
+      showNotification('Rôle supprimé avec succès', 'success');
     } catch (err) {
-      showNotification('Failed to delete role', 'error');
+      showNotification('Échec de la suppression du rôle', 'error');
     }
   };
 
@@ -154,28 +144,24 @@ const Roles: React.FC = () => {
 
   return (
     <div className="space-y-4 max-w-[1600px] mx-auto relative">
-      {/* Loading indicator */}
       {loading && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
           <div className="flex items-center">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            <span className="text-sm">Loading roles data...</span>
+            <span className="text-sm">Chargement des rôles...</span>
           </div>
         </div>
       )}
-
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">{t('roles')}</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t('roles') || 'Rôles'}</h1>
         <div className="relative">
           <button
             ref={addRoleButtonRef}
-            onClick={() => {
-              setShowAddInput(true);
-            }}
+            onClick={() => setShowAddInput(true)}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600"
           >
             <Plus className="w-4 h-4" />
-            {t('addNew')}
+            {t('addNew') || 'Ajouter'}
           </button>
           {showAddInput && (
             <div
@@ -186,7 +172,7 @@ const Roles: React.FC = () => {
                 type="text"
                 value={newRoleName}
                 onChange={(e) => setNewRoleName(e.target.value)}
-                placeholder="Enter role name"
+                placeholder="Nom du rôle"
                 className="flex-1 px-3 py-2 border-none focus:outline-none"
                 autoFocus
               />
@@ -202,11 +188,10 @@ const Roles: React.FC = () => {
           )}
         </div>
       </div>
-
       <div className="bg-white rounded-xl shadow-md p-6">
         {loading || roles.length === 0 ? (
           <div className="flex justify-center items-center">
-            <img src={loadingImage} alt="Loading..." className="w-32 h-32" />
+            <img src={loadingImage} alt="Chargement..." className="w-32 h-32" />
           </div>
         ) : (
           <>
@@ -214,7 +199,7 @@ const Roles: React.FC = () => {
               <div className="relative w-64">
                 <input
                   type="text"
-                  placeholder={t('search')}
+                  placeholder={t('search') || 'Rechercher...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -222,7 +207,6 @@ const Roles: React.FC = () => {
                 <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
               </div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {paginatedRoles.map((role) => (
                 <div key={role.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -245,19 +229,16 @@ const Roles: React.FC = () => {
                       </button>
                     </div>
                   </div>
-
                   <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-                    <span>{role.usersCount} users</span>
-                    <span>Created {role.createdAt}</span>
+                    <span>{role.usersCount} utilisateur{role.usersCount > 1 ? 's' : ''}</span>
+                    <span>Créé le {role.createdAt}</span>
                   </div>
                 </div>
               ))}
             </div>
-
-            {/* Pagination */}
             <div className="flex items-center justify-between mt-4 px-4">
               <div className="flex items-center text-sm text-gray-500">
-                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredRoles.length)} of {filteredRoles.length} entries
+                Affichage de {((currentPage - 1) * itemsPerPage) + 1} à {Math.min(currentPage * itemsPerPage, filteredRoles.length)} sur {filteredRoles.length} entrées
               </div>
               <div className="flex items-center space-x-2">
                 <button
@@ -265,7 +246,7 @@ const Roles: React.FC = () => {
                   disabled={currentPage === 1}
                   className="px-3 py-1 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
                 >
-                  Previous
+                  Précédent
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <button
@@ -285,7 +266,7 @@ const Roles: React.FC = () => {
                   disabled={currentPage === totalPages}
                   className="px-3 py-1 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
                 >
-                  Next
+                  Suivant
                 </button>
               </div>
             </div>
@@ -293,36 +274,34 @@ const Roles: React.FC = () => {
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-800">Delete Role</h2>
+              <h2 className="text-xl font-bold text-gray-800">Supprimer un rôle</h2>
               <button onClick={() => setShowDeleteModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <p className="mb-6">Are you sure you want to delete this role? This action cannot be undone.</p>
+            <p className="mb-6">Êtes-vous sûr de vouloir supprimer ce rôle ? Cette action est irréversible.</p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
               >
-                Cancel
+                Annuler
               </button>
               <button
                 onClick={handleDeleteRole}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
               >
-                Delete
+                Supprimer
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Notification */}
       {notification && (
         <div className="fixed bottom-4 right-4 w-80 z-50">
           <div className={`${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white rounded-lg shadow-lg overflow-hidden`}>

@@ -104,7 +104,7 @@ const CommissionOverview: React.FC<CommissionOverviewProps> = ({ showAmount, set
           </div>
         </div>
         <div className="bg-gradient-to-br from-yellow-50 to-orange-100 border border-yellow-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Commission Details</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Détails des commissions</h3>
           <div className="flex justify-center space-x-1 mb-4">
             {[1, 2, 3].map((i) => (
               <div
@@ -167,7 +167,7 @@ const CommissionOverview: React.FC<CommissionOverviewProps> = ({ showAmount, set
         <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-200 opacity-25 rounded-full -translate-y-8 translate-x-8"></div>
         <div className="absolute bottom-0 left-0 w-12 h-12 bg-orange-200 opacity-20 rounded-full translate-y-6 -translate-x-6"></div>
         <div className="absolute top-1/2 left-1/2 w-8 h-8 bg-yellow-300 opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Commission Details</h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Détails des commissions</h3>
         <p className="text-gray-500 text-xs mb-4">{getDateRangeDescription()}</p>
         <div className="flex">
           {/* Montant Prescription */}

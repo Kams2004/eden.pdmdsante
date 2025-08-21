@@ -46,10 +46,60 @@ const predefinedCommissions: PredefinedCommission[] = [
   },
   {
     id: 'commission-query',
-    title: 'Demande de Commission',
-    description: 'Demande concernant la structure ou les détails de la commission'
+    title: 'Requête de Commission',
+    description: 'Requête concernant la structure ou les détails de la commission'
   }
 ];
+
+// Fonction pour formater les dates
+const formatDate = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    
+    // Options pour le formatage français
+    const options: Intl.DateTimeFormatOptions = {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Paris' // Ajustez selon votre fuseau horaire
+    };
+    
+    return new Intl.DateTimeFormat('fr-FR', options).format(date);
+  } catch (error) {
+    console.error('Erreur de formatage de date:', error);
+    return dateString; // Retourne la date originale en cas d'erreur
+  }
+};
+
+// Fonction pour obtenir une date relative (optionnelle)
+const getRelativeTime = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) {
+      return 'À l\'instant';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `Il y a ${minutes} minute${minutes > 1 ? 's' : ''}`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `Il y a ${hours} heure${hours > 1 ? 's' : ''}`;
+    } else {
+      const days = Math.floor(diffInSeconds / 86400);
+      if (days < 7) {
+        return `Il y a ${days} jour${days > 1 ? 's' : ''}`;
+      } else {
+        return formatDate(dateString);
+      }
+    }
+  } catch (error) {
+    return formatDate(dateString);
+  }
+};
 
 const MobileRequestView: React.FC = () => {
   const { showSuccessToast, showErrorToast, ToastComponent } = useToast();
@@ -67,6 +117,7 @@ const MobileRequestView: React.FC = () => {
     try {
       const userData: UserData = JSON.parse(localStorage.getItem('userData') || '{}');
       const userId = userData.id;
+
       if (userId) {
         const response = await axiosInstance.get<Commission[]>(`/requete/get_requests/${userId}`);
         const commissions: Commission[] = response.data.map((req: any) => ({
@@ -84,7 +135,7 @@ const MobileRequestView: React.FC = () => {
         setSentCommissions(commissions);
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des commissions de l\'utilisateur :', error);
+      console.error('Erreur lors de la récupération des requêtes de l\'utilisateur :', error);
     } finally {
       setLoading(false);
     }
@@ -97,14 +148,18 @@ const MobileRequestView: React.FC = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedCommission || !customMessage) return;
+
     setLoading(true);
     const selectedPredefinedCommission = predefinedCommissions.find(c => c.id === selectedCommission);
+    
     if (!selectedPredefinedCommission) {
       setLoading(false);
       return;
     }
+
     const userData: UserData = JSON.parse(localStorage.getItem('userData') || '{}');
     const { email, first_name, last_name } = userData;
+
     const requestData = {
       administration: false,
       commission: selectedCommission === 'commission-mismatch',
@@ -117,16 +172,17 @@ const MobileRequestView: React.FC = () => {
       revendication_examen: selectedCommission === 'commission-query',
       suggestion: selectedCommission === 'commission-delay'
     };
+
     try {
       await axiosInstance.post('/requete/add', requestData);
-      showSuccessToast('Demande de commission envoyée avec succès');
+      showSuccessToast('Requête envoyée avec succès');
       await fetchUserCommissions();
       setSelectedCommission('');
       setCustomMessage('');
       setUrgency('low');
     } catch (error) {
-      console.error('Erreur lors de l\'envoi de la commission :', error);
-      showErrorToast('Échec de l\'envoi de la commission');
+      console.error('Erreur lors de l\'envoi de la requête :', error);
+      showErrorToast('Échec de l\'envoi de la requête');
     } finally {
       setLoading(false);
     }
@@ -150,11 +206,11 @@ const MobileRequestView: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         {/* En-tête */}
         <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4">
-          <h1 className="text-xl font-semibold text-black">Soumettre une Demande de Commission</h1>
-
+          <h1 className="text-xl font-semibold text-black">Soumettre une Requête</h1>
           <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
         </div>
-        {/* Chargement du formulaire de nouvelle commission */}
+
+        {/* Chargement du formulaire de nouvelle requête */}
         <div className="px-4 sm:px-6 py-4 bg-blue-50/30 border-b border-blue-200">
           <div className="space-y-4">
             <div className="space-y-3">
@@ -170,6 +226,7 @@ const MobileRequestView: React.FC = () => {
                 </div>
               ))}
             </div>
+
             <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm animate-pulse">
               <div className="h-4 w-32 bg-slate-200 rounded mb-4"></div>
               <div className="flex gap-2">
@@ -178,16 +235,19 @@ const MobileRequestView: React.FC = () => {
                 ))}
               </div>
             </div>
+
             <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm animate-pulse">
               <div className="h-4 w-48 bg-slate-200 rounded mb-2"></div>
               <div className="w-full h-20 bg-slate-200 rounded-lg"></div>
             </div>
+
             <div className="flex justify-end">
               <div className="flex items-center px-6 py-3 bg-slate-200 text-white text-sm font-medium rounded-lg w-32"></div>
             </div>
           </div>
         </div>
-        {/* Chargement de la liste des commissions envoyées */}
+
+        {/* Chargement de la liste des requêtes envoyées */}
         <div className="px-4 sm:px-6 py-4 border-t border-blue-200">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -195,12 +255,14 @@ const MobileRequestView: React.FC = () => {
               <div className="w-8 h-1 bg-slate-200 rounded-full"></div>
             </div>
           </div>
+
           <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3 mb-4">
             <div className="relative flex-1">
               <div className="h-10 w-full bg-slate-200 rounded-lg"></div>
             </div>
             <div className="h-10 w-32 bg-slate-200 rounded-lg"></div>
           </div>
+
           <div className="space-y-4">
             {[...Array(3)].map((_, index) => (
               <div key={index} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-4 shadow-sm relative overflow-hidden animate-pulse">
@@ -229,6 +291,7 @@ const MobileRequestView: React.FC = () => {
               </div>
             ))}
           </div>
+
           {/* Chargement de la pagination */}
           <div className="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50">
             <div className="flex items-center justify-between">
@@ -246,11 +309,11 @@ const MobileRequestView: React.FC = () => {
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       {/* En-tête */}
       <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4">
-        <h1 className="text-xl font-semibold text-black">Soumettre une Demande de Commission</h1>
-  
+        <h1 className="text-xl font-semibold text-black">Soumettre une Requête</h1>
         <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
       </div>
-      {/* Formulaire de Nouvelle Commission */}
+
+      {/* Formulaire de Nouvelle Requête */}
       <div className="px-4 sm:px-6 py-4 bg-blue-50/30 border-b border-blue-200">
         <div className="space-y-4">
           <div className="space-y-3">
@@ -280,6 +343,7 @@ const MobileRequestView: React.FC = () => {
               </div>
             ))}
           </div>
+
           <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
             <label className="block text-sm font-semibold text-blue-800 mb-2">Niveau d'Urgence</label>
             <div className="flex gap-2">
@@ -299,6 +363,7 @@ const MobileRequestView: React.FC = () => {
               ))}
             </div>
           </div>
+
           <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
             <label className="block text-sm font-semibold text-blue-800 mb-2">Détails Supplémentaires</label>
             <textarea
@@ -306,9 +371,10 @@ const MobileRequestView: React.FC = () => {
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomMessage(e.target.value)}
               rows={4}
               className="w-full px-3 py-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white hover:border-slate-400 transition-colors"
-              placeholder="Veuillez fournir toute information supplémentaire concernant votre demande de commission..."
+              placeholder="Veuillez fournir toute information supplémentaire concernant votre requête..."
             ></textarea>
           </div>
+
           <div className="flex justify-end">
             <button
               type="submit"
@@ -327,26 +393,28 @@ const MobileRequestView: React.FC = () => {
               ) : (
                 <>
                   <Send className="w-4 h-4 mr-2" />
-                  Envoyer la Demande
+                  Envoyer la Requête
                 </>
               )}
             </button>
           </div>
         </div>
       </div>
-      {/* Liste des Commissions Envoyées */}
+
+      {/* Liste des Requêtes Envoyées */}
       <div className="px-4 sm:px-6 py-4 border-t border-blue-200">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h2 className="text-xl font-semibold text-blue-800">Commissions Envoyées</h2>
+            <h2 className="text-xl font-semibold text-blue-800">Requêtes Envoyées</h2>
             <div className="w-8 h-1 bg-blue-400 mt-1 rounded-full"></div>
           </div>
         </div>
+
         <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3 mb-4">
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder="Rechercher des commissions..."
+              placeholder="Rechercher des requêtes..."
               value={searchTerm}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 w-full bg-white hover:border-slate-400 transition-colors"
@@ -364,17 +432,19 @@ const MobileRequestView: React.FC = () => {
             <option value="rejected">Rejeté</option>
           </select>
         </div>
+
         <div className="space-y-4">
           {currentCommissions.map((commission: Commission) => (
             <div key={commission.id} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
               <div className="absolute bottom-0 left-0 w-12 h-12 bg-blue-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
+              
               <div className="flex items-start justify-between mb-3 relative z-10">
                 <div className="flex items-start space-x-3">
                   <MessageSquare className="w-5 h-5 text-blue-500 mt-0.5" />
                   <div>
                     <h3 className="text-sm font-bold text-blue-800">{commission.type}</h3>
-                    <p className="text-sm text-blue-700 mt-1">{commission.description}</p>
+                    {/* <p className="text-sm text-blue-700 mt-1">{commission.description}</p> */}
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -390,6 +460,7 @@ const MobileRequestView: React.FC = () => {
                   </span>
                 </div>
               </div>
+
               {commission.customMessage && (
                 <div className="mb-3 relative z-10">
                   <p className="text-sm font-medium text-blue-700 bg-white p-3 rounded-lg border border-blue-200">
@@ -397,13 +468,31 @@ const MobileRequestView: React.FC = () => {
                   </p>
                 </div>
               )}
+
+              {/* Section des dates compacte */}
               <div className="flex justify-between items-center pt-3 border-t border-blue-200 relative z-10">
-                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Créé: {commission.createdAt}</span>
-                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Mis à jour: {commission.updatedAt}</span>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Clock className="w-3 h-3 text-blue-600" />
+                    <span className="text-xs font-semibold text-blue-800">Créée</span>
+                  </div>
+                  <span className="text-xs font-medium text-slate-600">{formatDate(commission.createdAt)}</span>
+                  <span className="text-xs text-slate-500">{getRelativeTime(commission.createdAt)}</span>
+                </div>
+                
+                <div className="flex flex-col text-right">
+                  <div className="flex items-center gap-1 mb-1 justify-end">
+                    <span className="text-xs font-semibold text-blue-800">Mise à jour</span>
+                    <CheckCircle className="w-3 h-3 text-green-600" />
+                  </div>
+                  <span className="text-xs font-medium text-slate-600">{formatDate(commission.updatedAt)}</span>
+                  <span className="text-xs text-slate-500">{getRelativeTime(commission.updatedAt)}</span>
+                </div>
               </div>
             </div>
           ))}
         </div>
+
         {/* Pagination */}
         <div className="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50">
           <div className="flex items-center justify-between">
@@ -429,6 +518,7 @@ const MobileRequestView: React.FC = () => {
           </div>
         </div>
       </div>
+
       {ToastComponent}
     </div>
   );

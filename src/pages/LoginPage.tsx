@@ -69,19 +69,10 @@ const LoginPage: React.FC = () => {
     }
   }, [location.state?.username]);
 
-  const checkDoctorProfileComplete = (doctorData: DoctorData): boolean => {
-    const requiredFields = [
-      doctorData.DoctorName,
-      doctorData.DoctorLastname,
-      doctorData.DoctorEmail,
-      doctorData.DoctorCNI,
-      doctorData.DoctorNO,
-      doctorData.Speciality,
-      doctorData.DoctorPhone
-    ];
-    return requiredFields.every(field => field && field.trim() !== '') &&
-           doctorData.ModifiedAt !== null;
-  };
+const checkDoctorProfileComplete = (doctorData: any): boolean => {
+ return doctorData.doctor_is_confirmed === true;
+};
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

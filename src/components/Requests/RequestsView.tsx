@@ -46,10 +46,60 @@ const predefinedRequests: PredefinedRequest[] = [
   },
   {
     id: 'commission-query',
-    title: 'Demande de Commission',
-    description: 'Demande concernant la structure ou les détails de la commission'
+    title: 'Requête de Commission',
+    description: 'Requête concernant la structure ou les détails de la commission'
   }
 ];
+
+// Fonction pour formater les dates
+const formatDate = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+
+    // Options pour le formatage français
+    const options: Intl.DateTimeFormatOptions = {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Africa/Douala' // Ajusté pour le Cameroun
+    };
+
+    return new Intl.DateTimeFormat('fr-FR', options).format(date);
+  } catch (error) {
+    console.error('Erreur de formatage de date:', error);
+    return dateString; // Retourne la date originale en cas d'erreur
+  }
+};
+
+// Fonction pour obtenir une date relative (optionnelle)
+const getRelativeTime = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return 'À l\'instant';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `Il y a ${minutes} minute${minutes > 1 ? 's' : ''}`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `Il y a ${hours} heure${hours > 1 ? 's' : ''}`;
+    } else {
+      const days = Math.floor(diffInSeconds / 86400);
+      if (days < 7) {
+        return `Il y a ${days} jour${days > 1 ? 's' : ''}`;
+      } else {
+        return formatDate(dateString);
+      }
+    }
+  } catch (error) {
+    return formatDate(dateString);
+  }
+};
 
 const RequestsView: React.FC = () => {
   const { showSuccessToast, showErrorToast, ToastComponent } = useToast();
@@ -60,14 +110,13 @@ const RequestsView: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
-  const itemsPerPage: number = 6; // Augmenté pour le bureau
+  const itemsPerPage: number = 6;
   const [sentRequests, setSentRequests] = useState<Request[]>([]);
 
   const fetchUserRequests = async () => {
     try {
       const userData: UserData = JSON.parse(localStorage.getItem('userData') || '{}');
       const userId = userData.id;
-
       if (userId) {
         const response = await axiosInstance.get<Request[]>(`/requete/get_requests/${userId}`);
         const requests: Request[] = response.data.map((req: any) => ({
@@ -85,7 +134,7 @@ const RequestsView: React.FC = () => {
         setSentRequests(requests);
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des demandes de l\'utilisateur :', error);
+      console.error('Erreur lors de la récupération des requêtes de l\'utilisateur :', error);
     } finally {
       setLoading(false);
     }
@@ -120,14 +169,14 @@ const RequestsView: React.FC = () => {
     };
     try {
       await axiosInstance.post('/requete/add', requestData);
-      showSuccessToast('Demande envoyée avec succès');
+      showSuccessToast('Requête envoyée avec succès');
       await fetchUserRequests();
       setSelectedRequest('');
       setCustomMessage('');
       setUrgency('low');
     } catch (error) {
-      console.error('Erreur lors de l\'envoi de la demande :', error);
-      showErrorToast('Échec de l\'envoi de la demande');
+      console.error('Erreur lors de l\'envoi de la requête :', error);
+      showErrorToast('Échec de l\'envoi de la requête');
     } finally {
       setLoading(false);
     }
@@ -151,11 +200,10 @@ const RequestsView: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         {/* En-tête */}
         <div className="bg-white border-b border-slate-200 px-6 py-6">
-          <h1 className="text-2xl font-semibold text-black">Soumettre une Demande de Commission</h1>
-
+          <h1 className="text-2xl font-semibold text-black">Soumettre une Requête de Commission</h1>
           <div className="w-16 h-1 bg-blue-400 mt-3 rounded-full"></div>
         </div>
-        {/* Chargement du formulaire de nouvelle demande */}
+        {/* Chargement du formulaire de nouvelle requête */}
         <div className="px-6 py-6 bg-blue-50/30 border-b border-blue-200">
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -171,7 +219,6 @@ const RequestsView: React.FC = () => {
                 </div>
               ))}
             </div>
-
             <div className="bg-white p-5 rounded-lg border border-blue-200 shadow-sm animate-pulse">
               <div className="h-5 w-40 bg-slate-200 rounded mb-4"></div>
               <div className="flex gap-3">
@@ -189,7 +236,7 @@ const RequestsView: React.FC = () => {
             </div>
           </div>
         </div>
-        {/* Chargement de la liste des demandes envoyées */}
+        {/* Chargement de la liste des requêtes envoyées */}
         <div className="px-6 py-6 border-t border-blue-200">
           <div className="flex justify-between items-center mb-6">
             <div>
@@ -208,7 +255,6 @@ const RequestsView: React.FC = () => {
               <div key={index} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-5 shadow-sm relative overflow-hidden animate-pulse">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200 opacity-20 rounded-full -translate-y-10 translate-x-10"></div>
                 <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-300 opacity-15 rounded-full translate-y-8 -translate-x-8"></div>
-
                 <div className="flex items-start justify-between mb-4 relative z-10">
                   <div className="flex items-start space-x-3">
                     <div className="w-6 h-6 bg-slate-200 rounded-full mt-0.5"></div>
@@ -249,11 +295,10 @@ const RequestsView: React.FC = () => {
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       {/* En-tête */}
       <div className="bg-white border-b border-slate-200 px-6 py-6">
-        <h1 className="text-2xl font-semibold text-black">Soumettre une Demande de Commission</h1>
-     
+        <h1 className="text-2xl font-semibold text-black">Soumettre une Requête de Commission</h1>
         <div className="w-16 h-1 bg-blue-400 mt-3 rounded-full"></div>
       </div>
-      {/* Formulaire de Nouvelle Demande */}
+      {/* Formulaire de Nouvelle Requête */}
       <div className="px-6 py-6 bg-blue-50/30 border-b border-blue-200">
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -309,7 +354,7 @@ const RequestsView: React.FC = () => {
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomMessage(e.target.value)}
               rows={5}
               className="w-full px-4 py-4 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white hover:border-slate-400 transition-colors"
-              placeholder="Veuillez fournir toute information supplémentaire concernant votre demande de commission..."
+              placeholder="Veuillez fournir toute information supplémentaire concernant votre requête de commission..."
             ></textarea>
           </div>
           <div className="flex justify-end">
@@ -330,18 +375,18 @@ const RequestsView: React.FC = () => {
               ) : (
                 <>
                   <Send className="w-5 h-5 mr-2" />
-                  Envoyer la Demande
+                  Envoyer la Requête
                 </>
               )}
             </button>
           </div>
         </div>
       </div>
-      {/* Liste des Demandes Envoyées */}
+      {/* Liste des Requêtes Envoyées */}
       <div className="px-6 py-6 border-t border-blue-200">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-2xl font-semibold text-blue-800">Demandes Envoyées</h2>
+            <h2 className="text-2xl font-semibold text-blue-800">Requêtes Envoyées</h2>
             <div className="w-10 h-1 bg-blue-400 mt-2 rounded-full"></div>
           </div>
         </div>
@@ -349,7 +394,7 @@ const RequestsView: React.FC = () => {
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder="Rechercher des demandes..."
+              placeholder="Rechercher des requêtes..."
               value={searchTerm}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
               className="pl-12 pr-4 py-4 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 w-full bg-white hover:border-slate-400 transition-colors"
@@ -401,9 +446,26 @@ const RequestsView: React.FC = () => {
                   </p>
                 </div>
               )}
+
+              {/* Section des dates compacte pour desktop */}
               <div className="flex justify-between items-center pt-4 border-t border-blue-200 relative z-10">
-                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Créé: {request.createdAt}</span>
-                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Mis à jour: {request.updatedAt}</span>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Clock className="w-3 h-3 text-blue-600" />
+                    <span className="text-xs font-semibold text-blue-800">Créée</span>
+                  </div>
+                  <span className="text-xs font-medium text-slate-600">{formatDate(request.createdAt)}</span>
+                  <span className="text-xs text-slate-500">{getRelativeTime(request.createdAt)}</span>
+                </div>
+
+                <div className="flex flex-col text-right">
+                  <div className="flex items-center gap-1 mb-1 justify-end">
+                    <span className="text-xs font-semibold text-blue-800">Mise à jour</span>
+                    <CheckCircle className="w-3 h-3 text-green-600" />
+                  </div>
+                  <span className="text-xs font-medium text-slate-600">{formatDate(request.updatedAt)}</span>
+                  <span className="text-xs text-slate-500">{getRelativeTime(request.updatedAt)}</span>
+                </div>
               </div>
             </div>
           ))}

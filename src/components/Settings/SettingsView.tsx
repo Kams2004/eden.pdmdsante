@@ -1,25 +1,13 @@
-import { useState, useEffect } from "react";
-import { Save, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Save,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import axiosInstance from '../../api/axioConfig';
-
-interface DoctorData {
-  CreatedAt: string;
-  DoctorCNI: string;
-  DoctorDOB: string | null;
-  DoctorEmail: string;
-  DoctorFederationID: string;
-  DoctorLastname: string;
-  DoctorNO: string;
-  DoctorName: string;
-  DoctorNat: string;
-  DoctorPOB: string;
-  DoctorPhone: string;
-  DoctorPhone2: string;
-  ModifiedAt: string | null;
-  Speciality: string;
-  id: number;
-  user: number;
-}
 
 interface SettingsViewProps {
   onProfileUpdate?: () => void;
@@ -30,9 +18,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalType, setModalType] = useState<"success" | "error">("success");
   const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
   const [missingFields, setMissingFields] = useState<string[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
   const [formData, setFormData] = useState({
     doctorName: "",
     doctorLastname: "",
@@ -50,23 +42,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
 
   const totalSteps = 3;
 
-  const checkDoctorProfileComplete = (doctorData: DoctorData): boolean => {
-    const requiredFields = [
-      { key: 'DoctorName', label: 'Prénom' },
-      { key: 'DoctorLastname', label: 'Nom' },
-      { key: 'DoctorEmail', label: 'Email' },
-      { key: 'DoctorCNI', label: 'CNI' },
-      { key: 'DoctorNO', label: 'Numéro de Médecin' },
-      { key: 'Speciality', label: 'Spécialité' },
-      { key: 'DoctorPhone', label: 'Téléphone Principal' }
-    ];
-
-    const missing = requiredFields.filter(field => 
-      !doctorData[field.key] || doctorData[field.key].trim() === ''
-    ).map(field => field.label);
-
-    setMissingFields(missing);
-    return missing.length === 0 && doctorData.ModifiedAt !== null;
+  const checkDoctorProfileComplete = (doctorData: any): boolean => {
+    return doctorData.doctor_is_confirmed === true;
   };
 
   const validateCurrentFormData = (): boolean => {
@@ -80,12 +57,44 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
       { key: 'doctorPhone', label: 'Téléphone Principal' }
     ];
 
-    const missing = requiredFields.filter(field => 
-      !formData[field.key] || formData[field.key].trim() === ''
-    ).map(field => field.label);
+    const errors: Record<string, string> = {};
+    let isValid = true;
 
-    setMissingFields(missing);
-    return missing.length === 0;
+    if (currentStep === 1) {
+      if (!formData.doctorName) {
+        errors.doctorName = "Prénom est requis";
+        isValid = false;
+      }
+      if (!formData.doctorLastname) {
+        errors.doctorLastname = "Nom est requis";
+        isValid = false;
+      }
+      if (!formData.doctorEmail) {
+        errors.doctorEmail = "Email est requis";
+        isValid = false;
+      }
+      if (!formData.doctorCNI) {
+        errors.doctorCNI = "CNI est requise";
+        isValid = false;
+      }
+    } else if (currentStep === 2) {
+      if (!formData.doctorNO) {
+        errors.doctorNO = "Numéro de Médecin est requis";
+        isValid = false;
+      }
+      if (!formData.speciality) {
+        errors.speciality = "Spécialité est requise";
+        isValid = false;
+      }
+    } else if (currentStep === 3) {
+      if (!formData.doctorPhone) {
+        errors.doctorPhone = "Téléphone Principal est requis";
+        isValid = false;
+      }
+    }
+
+    setFormErrors(errors);
+    return isValid;
   };
 
   const getStepTitle = () => {
@@ -106,7 +115,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
       const userData = JSON.parse(localStorage.getItem('userData') || '{}');
       return userData.doctor_id || userData.id || userData.user_id;
     } catch (error) {
-      console.error('Erreur lors de la récupération de l\'ID du médecin:', error);
+      console.error('Erreur lors de la récupération de l\'ID:', error);
       return null;
     }
   };
@@ -115,21 +124,17 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
     const fetchDoctorInfo = async () => {
       const doctorId = getDoctorId();
       if (!doctorId) {
-        setError('ID du médecin non trouvé');
+        setError('ID non trouvé');
         setIsLoading(false);
         return;
       }
-
       try {
         setIsLoading(true);
         setError(null);
-        const response = await axiosInstance.get<DoctorData>(`/doctors/informations/${doctorId}`);
-        const doctorData: DoctorData = response.data;
-
-        // Check if profile is incomplete
+        const response = await axiosInstance.get(`/doctors/informations/${doctorId}`);
+        const doctorData = response.data;
         const isComplete = checkDoctorProfileComplete(doctorData);
         setIsProfileIncomplete(!isComplete);
-
         const formatDate = (dateString: string | null): string => {
           if (!dateString) return "";
           const date = new Date(dateString);
@@ -138,7 +143,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
           const day = String(date.getDate()).padStart(2, '0');
           return `${year}-${month}-${day}`;
         };
-
         setFormData({
           doctorName: doctorData.DoctorName || "",
           doctorLastname: doctorData.DoctorLastname || "",
@@ -154,24 +158,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
           doctorPhone2: doctorData.DoctorPhone2 || "",
         });
       } catch (error) {
-        console.error('Erreur lors de la récupération des informations du médecin:', error);
-        setError('Échec du chargement des informations du médecin');
+        console.error('Erreur lors de la récupération des informations:', error);
+        setError('Échec du chargement des informations');
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchDoctorInfo();
   }, []);
-
-  useEffect(() => {
-    if (showSuccessModal) {
-      const timer = setTimeout(() => {
-        setShowSuccessModal(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showSuccessModal]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -179,11 +173,19 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
       ...prev,
       [name]: value,
     }));
+
+    // Réinitialiser l'erreur pour ce champ
+    setFormErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
   };
 
   const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+    if (validateCurrentFormData()) {
+      if (currentStep < totalSteps) {
+        setCurrentStep(currentStep + 1);
+      }
     }
   };
 
@@ -193,22 +195,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
     }
   };
 
-  const handleSave = async () => {
-    // Validate form data before saving
-    if (!validateCurrentFormData()) {
-      setError(`Veuillez remplir tous les champs obligatoires: ${missingFields.join(', ')}`);
-      return;
-    }
-
-    const doctorId = getDoctorId();
-    if (!doctorId) {
-      setError('ID du médecin non trouvé');
-      return;
-    }
-
+  const confirmAndUpdate = async (doctorId: number) => {
     try {
-      setIsSaving(true);
-      setError(null);
+      // Étape 1: Confirmer
+      await axiosInstance.put(`/doctors/confirm/${doctorId}`);
+      // Étape 2: Mettre à jour les informations
       const updateData = {
         DoctorName: formData.doctorName,
         DoctorLastname: formData.doctorLastname,
@@ -223,30 +214,55 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
         DoctorPhone: formData.doctorPhone,
         DoctorPhone2: formData.doctorPhone2,
       };
-
       const response = await axiosInstance.put(`/doctors/update/${doctorId}`, updateData);
-      
-      // Update localStorage with new doctor data
-      if (response.data && response.data.Doctor) {
-        localStorage.setItem('doctorData', JSON.stringify(response.data.Doctor));
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des informations:', error);
+      throw new Error('Échec de la mise à jour des informations');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!validateCurrentFormData()) {
+      setError(`Veuillez remplir tous les champs obligatoires.`);
+      return;
+    }
+    const doctorId = getDoctorId();
+    if (!doctorId) {
+      setError('ID non trouvé');
+      return;
+    }
+    try {
+      setIsSaving(true);
+      setError(null);
+      const updateResponse = await confirmAndUpdate(doctorId);
+      if (updateResponse && updateResponse.Doctor) {
+        localStorage.setItem('doctorData', JSON.stringify(updateResponse.Doctor));
         localStorage.setItem('isProfileComplete', 'true');
         localStorage.removeItem('showSettingsFirst');
+        // Afficher la modale de succès
+        setModalType("success");
+        setModalMessage("Les informations ont été mises à jour avec succès !");
+        setShowResultModal(true);
+        setIsProfileIncomplete(false);
+        setMissingFields([]);
+        if (onProfileUpdate) {
+          onProfileUpdate();
+        }
       }
-
-      setShowSuccessModal(true);
-      setIsProfileIncomplete(false);
-      setMissingFields([]);
-
-      // Call the callback to update parent component
-      if (onProfileUpdate) {
-        onProfileUpdate();
-      }
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour des informations du médecin:', error);
-      setError('Échec de la mise à jour des informations du médecin');
+    } catch (error: any) {
+      // Afficher la modale d'erreur
+      setModalType("error");
+      setModalMessage(error.message || "Une erreur est survenue lors de la mise à jour des informations.");
+      setShowResultModal(true);
+      console.error('Erreur:', error);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const closeResultModal = () => {
+    setShowResultModal(false);
   };
 
   return (
@@ -256,39 +272,29 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
           <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
             <div className="flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              <span className="text-sm">Chargement des informations du médecin...</span>
+              <span className="text-sm">Chargement des informations...</span>
             </div>
           </div>
         )}
-
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
-
-        {isProfileIncomplete && missingFields.length > 0 && (
-          <div className="bg-orange-100 border border-orange-400 text-orange-700 px-4 py-3 rounded mb-4">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+        {isProfileIncomplete && (
+          <div className="bg-orange-50 border-l-4 border-orange-500 text-orange-700 p-4 mb-6 rounded-md shadow-sm flex items-start">
+            <div className="mr-3 mt-1">
+              <svg className="h-5 w-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <div>
-                <strong>Profil incomplet!</strong>
-                <p className="text-sm mt-1">
-                  Veuillez remplir les champs obligatoires suivants: {missingFields.join(', ')}
-                </p>
-              </div>
+            </div>
+            <div>
+              <p className="font-medium">
+                Veuillez compléter vos informations avant d'accéder aux autres sections.
+              </p>
             </div>
           </div>
         )}
-
-        {showSuccessModal && (
-          <div className="fixed top-30 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded shadow-lg">
-            Informations du médecin mises à jour avec succès !
-          </div>
-        )}
-
         {/* Indicateur d'étape */}
         <div className="flex justify-center mb-8">
           <div className="flex items-center space-x-4">
@@ -308,10 +314,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
             ))}
           </div>
         </div>
-
         {/* Carte de formulaire avec motifs colorés */}
         <div className="bg-white rounded-lg shadow-xl border border-gray-100 p-8 relative overflow-hidden">
-          {/* Éléments de motif colorés à l'intérieur du conteneur */}
+          {/* Éléments de motif colorés */}
           <div className="absolute inset-0 overflow-hidden">
             <div className="absolute top-4 left-4 w-16 h-16 bg-gradient-to-br from-blue-200 to-blue-300 rounded-full opacity-20"></div>
             <div className="absolute top-8 right-8 w-12 h-12 bg-gradient-to-br from-red-200 to-red-300 rounded-full opacity-25"></div>
@@ -319,14 +324,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
             <div className="absolute bottom-4 right-4 w-14 h-14 bg-gradient-to-br from-green-200 to-green-300 rounded-full opacity-25"></div>
             <div className="absolute top-1/2 left-1/4 w-8 h-8 bg-gradient-to-br from-purple-200 to-purple-300 rounded-full opacity-30"></div>
             <div className="absolute top-1/3 right-1/3 w-10 h-10 bg-gradient-to-br from-pink-200 to-pink-300 rounded-full opacity-25"></div>
-            {/* Formes géométriques */}
             <div className="absolute top-16 left-1/2 w-6 h-6 bg-gradient-to-br from-blue-300 to-blue-400 opacity-20 transform rotate-45"></div>
             <div className="absolute bottom-16 right-1/4 w-8 h-8 bg-gradient-to-br from-red-300 to-red-400 opacity-20 transform rotate-12"></div>
             <div className="absolute top-3/4 left-1/3 w-7 h-7 bg-gradient-to-br from-yellow-300 to-yellow-400 opacity-25 rounded-lg transform rotate-45"></div>
-            {/* Superposition de motif subtil */}
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-50/30 via-transparent to-red-50/30"></div>
           </div>
-          
           <div className="relative z-10">
             <div className="flex items-center mb-8">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mr-3 shadow-md"></div>
@@ -334,10 +336,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                 {getStepTitle()}
               </h2>
             </div>
-
+            {/* Formulaires par étape */}
             {currentStep === 1 && (
               <div className="space-y-6">
-                {/* Prénom et Nom */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -349,12 +350,15 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                       value={formData.doctorName}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        missingFields.includes('Prénom') ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        formErrors.doctorName ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                       placeholder="Entrez votre prénom"
                       disabled={isLoading}
                       required
                     />
+                    {formErrors.doctorName && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.doctorName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -366,16 +370,17 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                       value={formData.doctorLastname}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        missingFields.includes('Nom') ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        formErrors.doctorLastname ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                       placeholder="Entrez votre nom"
                       disabled={isLoading}
                       required
                     />
+                    {formErrors.doctorLastname && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.doctorLastname}</p>
+                    )}
                   </div>
                 </div>
-
-                {/* Email et Date de Naissance */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -387,12 +392,15 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                       value={formData.doctorEmail}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        missingFields.includes('Email') ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        formErrors.doctorEmail ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                       placeholder="Entrez votre email"
                       disabled={isLoading}
                       required
                     />
+                    {formErrors.doctorEmail && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.doctorEmail}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -408,8 +416,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                     />
                   </div>
                 </div>
-
-                {/* Lieu de Naissance et Nationalité */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -440,8 +446,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                     />
                   </div>
                 </div>
-
-                {/* CNI */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     CNI <span className="text-red-500">*</span>
@@ -452,23 +456,24 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                     value={formData.doctorCNI}
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                      missingFields.includes('CNI') ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      formErrors.doctorCNI ? 'border-red-500 bg-red-50' : 'border-gray-300'
                     }`}
                     placeholder="Entrez votre numéro de CNI"
                     disabled={isLoading}
                     required
                   />
+                  {formErrors.doctorCNI && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors.doctorCNI}</p>
+                  )}
                 </div>
               </div>
             )}
-
             {currentStep === 2 && (
               <div className="space-y-6">
-                {/* Numéro de Médecin et Spécialité */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Numéro de Médecin (ONMC) <span className="text-red-500">*</span>
+                      Numéro de Médecin <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -476,12 +481,15 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                       value={formData.doctorNO}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        missingFields.includes('Numéro de Médecin') ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        formErrors.doctorNO ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                       placeholder="Entrez votre numéro de médecin"
                       disabled={isLoading}
                       required
                     />
+                    {formErrors.doctorNO && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.doctorNO}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -493,16 +501,17 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                       value={formData.speciality}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        missingFields.includes('Spécialité') ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        formErrors.speciality ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                       placeholder="Entrez votre spécialité"
                       disabled={isLoading}
                       required
                     />
+                    {formErrors.speciality && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.speciality}</p>
+                    )}
                   </div>
                 </div>
-
-                {/* ID de Fédération */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     ID de Fédération
@@ -519,14 +528,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                 </div>
               </div>
             )}
-
             {currentStep === 3 && (
               <div className="space-y-6">
-                {/* Numéros de Téléphone */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Téléphone Principal <span className="text-red-500">*</span>
+                      Téléphone <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="tel"
@@ -534,12 +541,15 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                       value={formData.doctorPhone}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        missingFields.includes('Téléphone Principal') ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        formErrors.doctorPhone ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
-                      placeholder="Entrez votre numéro de téléphone principal"
+                      placeholder="Entrez votre numéro de téléphone"
                       disabled={isLoading}
                       required
                     />
+                    {formErrors.doctorPhone && (
+                      <p className="text-red-500 text-xs mt-1">{formErrors.doctorPhone}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -558,8 +568,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                 </div>
               </div>
             )}
-
-            {/* Boutons de Navigation */}
+            {/* Boutons de navigation */}
             <div className="flex justify-between mt-8">
               <button
                 onClick={handlePrevious}
@@ -568,7 +577,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-
               {currentStep < totalSteps ? (
                 <button
                   onClick={handleNext}
@@ -593,8 +601,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
             </div>
           </div>
         </div>
-
-        {/* Indicateur du Bas */}
+        {/* Indicateur du bas */}
         <div className="flex justify-center mt-6">
           <div className="flex space-x-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>
@@ -603,6 +610,32 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
           </div>
         </div>
       </div>
+      {/* Modale de résultat */}
+      {showResultModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
+            <div className="flex justify-center mb-4">
+              {modalType === "success" && <CheckCircle2 className="h-12 w-12 text-green-500" />}
+              {modalType === "error" && <XCircle className="h-12 w-12 text-red-500" />}
+            </div>
+            <h3 className="text-lg font-medium text-center mb-2">
+              {modalType === "success" && "Succès"}
+              {modalType === "error" && "Erreur"}
+            </h3>
+            <p className="text-gray-600 text-center mb-6">
+              {modalMessage}
+            </p>
+            <div className="flex justify-center">
+              <button
+                onClick={closeResultModal}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
