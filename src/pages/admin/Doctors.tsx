@@ -102,7 +102,7 @@ const ONMCErrorModal: React.FC<ONMCErrorModalProps> = ({
 }) => {
   if (!isOpen) return null;
   return (
-    <div className="absolute top-full mt-1 left-0 right-0 bg-red-50 border border-red-200 rounded-lg p-3 shadow-lg z-20">
+    <div className="absolute top-full mt-3 left-0 right-0 bg-red-50 border border-red-200 rounded-lg p-3 shadow-lg z-20">
       <div className="flex items-start space-x-2">
         <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
         <div className="flex-1">
@@ -111,7 +111,7 @@ const ONMCErrorModal: React.FC<ONMCErrorModalProps> = ({
           </p>
           <p className="text-red-700 text-sm mt-1">
             Le docteur avec le numéro ONMC{" "}
-            <span className="font-medium">{onmcErrorNumber}</span> existe déjà dans
+            <span className="font-medium">{onmcNumber}</span> existe déjà dans
             le système.
           </p>
           <p className="text-red-600 text-xs mt-2">
@@ -262,6 +262,11 @@ const Doctors: React.FC = () => {
     }
   }, [searchTerm, doctors]);
 
+  // Function to check if ONMC number already exists in loaded data
+  const checkONMCExists = (onmcNumber: string): boolean => {
+    return doctors.some((doctor) => doctor.DoctorNO === onmcNumber.trim());
+  };
+
   const handleResetSearch = () => {
     setSearchTerm("");
     setShowDropdown(false);
@@ -333,6 +338,19 @@ const Doctors: React.FC = () => {
 
   const handleAddDoctor = async () => {
     if (!newDoctorNO.trim()) return;
+
+    // First check if ONMC already exists in loaded data
+    if (checkONMCExists(newDoctorNO)) {
+      setOnmcErrorNumber(newDoctorNO);
+      setShowONMCError(true);
+      setTimeout(() => {
+        setShowONMCError(false);
+        setOnmcErrorNumber("");
+      }, 5000);
+      return;
+    }
+
+    // If not found locally, proceed with backend call
     setIsAddingDoctor(true);
     try {
       const response = await axiosInstance.get(
