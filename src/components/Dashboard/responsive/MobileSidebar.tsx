@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, LayoutDashboard, User, FileText, DollarSign, Settings, BarChart2 } from 'lucide-react';
+import { X, LayoutDashboard, User, FileText, DollarSign, Settings, BarChart2, Phone, HelpCircle } from 'lucide-react';
 import { getUserFromStorage, getUserInitials, getUserFullName, debugUserData } from './userUtils';
 
 interface MobileSidebarProps {
@@ -35,7 +35,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const menuItems = [
     { name: 'Tableau de bord', icon: LayoutDashboard, key: 'dashboard' },
     { name: 'Patients', icon: User, key: 'patients' },
-    { name: 'Requests', icon: FileText, key: 'request' },
+    { name: 'Requêtes', icon: FileText, key: 'request' },
     { name: 'Commissions', icon: DollarSign, key: 'commissions' },
     { name: 'Analyse des commissions', icon: BarChart2, key: 'commissionAnalysis' },
     { name: 'Paramètres', icon: Settings, key: 'settings' }
@@ -44,6 +44,10 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const handleMenuItemClick = (menuKey: string) => {
     onMenuClick(menuKey);
     setSidebarOpen(false);
+  };
+
+  const handlePhoneCall = (phoneNumber: string) => {
+    window.open(`tel:${phoneNumber}`, '_self');
   };
 
   return (
@@ -78,7 +82,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
         </div>
 
         {/* Navigation */}
-        <nav className="p-4">
+        <nav className="p-4 flex-1 overflow-y-auto">
           <ul className="space-y-1">
             {menuItems.map((item, index) => {
               const Icon = item.icon;
@@ -110,8 +114,49 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
           </ul>
         </nav>
 
+        {/* Help Service Section */}
+<div className="p-3 border-t border-blue-200 bg-white/60 backdrop-blur-sm">
+  <div className="flex items-center justify-between mb-2">
+    <div className="flex items-center space-x-2">
+      <HelpCircle className="text-blue-600" size={16} />
+      <span className="text-black font-semibold text-xs">Service d'aide</span>
+    </div>
+  </div>
+  <div className="grid grid-cols-2 gap-2">
+    {/* Relations publiques */}
+    <div className="space-y-1 pr-2 border-r border-blue-200">
+      <p className="text-[10px] text-gray-700 mb-1">Relations publiques:</p>
+      <div className="space-y-1">
+        <button
+          onClick={() => handlePhoneCall('+237696134160')}
+          className="flex items-center space-x-1 w-full px-2 py-1 rounded-lg hover:bg-blue-100/70 transition-colors group"
+        >
+          <Phone className="text-green-600" size={14} />
+          <span className="text-[10px] text-black group-hover:text-blue-700">+237 696134160</span>
+        </button>
+   
+      </div>
+    </div>
+    {/* Service technique */}
+    <div className="space-y-1 pl-2">
+      <p className="text-[10px] text-gray-700 mb-1">Service technique:</p>
+      <div className="space-y-1">
+        <button
+          onClick={() => handlePhoneCall('+237695995842')}
+          className="flex items-center space-x-1 w-full px-2 py-1 rounded-lg hover:bg-blue-100/70 transition-colors group"
+        >
+          <Phone className="text-green-600" size={14} />
+          <span className="text-[10px] text-black group-hover:text-blue-700">+237  675478110</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
         {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
+        <div className="p-4">
           <div className="text-center">
             <p className="text-xs text-black">À votre service pour votre santé</p>
             <div className="w-8 h-0.5 bg-gradient-to-r from-blue-300 to-blue-400 mx-auto mt-2 rounded-full"></div>

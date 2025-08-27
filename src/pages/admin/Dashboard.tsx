@@ -55,25 +55,32 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
     requests: null,
   });
   const [recentRequests, setRecentRequests] = useState<Request[]>([]);
+  const [systemStatus, setSystemStatus] = useState<'operational' | 'problems'>('operational');
+  const [lastChecked, setLastChecked] = useState<string>('N/A');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Récupérer le nombre d'utilisateurs
+
+        // Fetch users
         const usersResponse = await axiosInstance.get('/users/nb');
         const numberOfUsers = usersResponse.data['Nombre Utilisateur '];
-        // Récupérer le nombre de médecins
+
+        // Fetch doctors
         const doctorsResponse = await axiosInstance.get('/doctors/nbr');
         const numberOfDoctors = doctorsResponse.data['Nombre'];
-        // Récupérer le nombre de demandes
+
+        // Fetch requests
         const requestsResponse = await axiosInstance.get('/requete/nbr');
         const numberOfRequests = requestsResponse.data['Nbr'];
-        // Récupérer les rôles
+
+        // Fetch roles
         const rolesResponse = await axiosInstance.get('/roles/');
         const roles = rolesResponse.data;
         const numberOfRoles = roles.length;
-        // Récupérer les demandes récentes
+
+        // Fetch recent requests
         const requestsDataResponse = await axiosInstance.get('/requete/');
         const now = new Date();
         const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -85,9 +92,19 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
           .sort((a: Request, b: Request) => {
             const dateA = new Date(a.UpdateAt || a.CreatedAt || 0).getTime();
             const dateB = new Date(b.UpdateAt || b.CreatedAt || 0).getTime();
-            return dateB - dateA; // Trier par ordre décroissant
+            return dateB - dateA;
           })
-          .slice(0, 4); // Limiter aux 4 demandes les plus récentes
+          .slice(0, 4);
+
+        // Check system status
+        const heartbeatResponse = await axiosInstance.post('/heartbeat');
+        if (heartbeatResponse.data.status === 'ok') {
+          setSystemStatus('operational');
+          setLastChecked(new Date().toLocaleTimeString());
+        } else {
+          setSystemStatus('problems');
+        }
+
         setFetchedStats({
           users: numberOfUsers,
           roles: numberOfRoles,
@@ -97,24 +114,45 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
         setRecentRequests(filteredRequests);
         setError(null);
       } catch (err: any) {
-        console.error('Échec de la récupération des données du tableau de bord :', err);
-        let errorMessage = 'Échec du chargement des données du tableau de bord.';
+        console.error('Failed to fetch dashboard data:', err);
+        let errorMessage = 'Failed to load dashboard data.';
         if (err.code === 'ERR_NETWORK') {
-          errorMessage = 'Erreur de connexion réseau. Veuillez vérifier votre connexion internet.';
+          errorMessage = 'Network connection error. Please check your internet connection.';
         } else if (err.response?.status === 500) {
-          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+          errorMessage = 'Server error. Please try again later.';
         } else if (err.response?.status === 404) {
-          errorMessage = 'Service introuvable. Veuillez contacter le support.';
+          errorMessage = 'Service not found. Please contact support.';
         }
         setError(errorMessage);
+        setSystemStatus('problems');
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
   }, [stats.roles]);
 
-  // Masquer automatiquement l'erreur après 8 secondes
+  // Periodic heartbeat check
+  useEffect(() => {
+    const heartbeatInterval = setInterval(async () => {
+      try {
+        const heartbeatResponse = await axiosInstance.post('/heartbeat');
+        if (heartbeatResponse.data.status === 'ok') {
+          setSystemStatus('operational');
+          setLastChecked(new Date().toLocaleTimeString());
+        } else {
+          setSystemStatus('problems');
+        }
+      } catch (err) {
+        setSystemStatus('problems');
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(heartbeatInterval);
+  }, []);
+
+  // Auto-hide error after 8 seconds
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => {
@@ -134,36 +172,36 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
   };
 
   const recentActivities = [
-    { id: 1, action: "Nouvel utilisateur inscrit", time: "Il y a 5 minutes" },
-    { id: 2, action: "Permissions de rôle mises à jour", time: "Il y a 10 minutes" },
-    { id: 3, action: "Sauvegarde du système terminée", time: "Il y a 25 minutes" },
-    { id: 4, action: "Nouveau profil de médecin créé", time: "Il y a 1 heure" },
+    { id: 1, action: "New user registered", time: "5 minutes ago" },
+    { id: 2, action: "Role permissions updated", time: "10 minutes ago" },
+    { id: 3, action: "System backup completed", time: "25 minutes ago" },
+    { id: 4, action: "New doctor profile created", time: "1 hour ago" },
   ];
 
   const notifications = [
-    { id: 1, message: "Maintenance du système prévue", type: "avertissement" },
-    { id: 2, message: "Nouvelle fonctionnalité déployée", type: "info" },
-    { id: 3, message: "Mise à jour de sécurité disponible", type: "critique" },
+    { id: 1, message: "System maintenance scheduled", type: "warning" },
+    { id: 2, message: "New feature deployed", type: "info" },
+    { id: 3, message: "Security update available", type: "critical" },
   ];
 
   const determineRequestType = (req: Request) => {
-    if (req.connection) return 'Demande de connexion';
-    if (req.commission) return 'Incohérence de commission';
-    if (req.revendication_examen) return 'Problème de dossier patient';
-    if (req.suggestion) return 'Retard de paiement';
-    if (req.error) return 'Erreur système';
-    if (req.administration) return 'Demande administrative';
-    return 'Demande inconnue';
+    if (req.connection) return 'Connection Request';
+    if (req.commission) return 'Commission Inconsistency';
+    if (req.revendication_examen) return 'Patient File Issue';
+    if (req.suggestion) return 'Payment Delay';
+    if (req.error) return 'System Error';
+    if (req.administration) return 'Administrative Request';
+    return 'Unknown Request';
   };
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-4 relative">
-      {/* Notification d'erreur - Non bloquante */}
+      {/* Error Notification */}
       {error && (
         <div className="fixed top-20 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium">Erreur</p>
+              <p className="text-sm font-medium">Error</p>
               <p className="text-xs mt-1">{error}</p>
             </div>
             <button
@@ -177,73 +215,76 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
             onClick={handleRetry}
             className="mt-2 text-xs underline hover:no-underline"
           >
-            Réessayer
+            Retry
           </button>
         </div>
       )}
 
-      {/* Indicateur de chargement */}
+      {/* Loading Indicator */}
       {loading && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
           <div className="flex items-center">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            <span className="text-sm">Chargement des données du tableau de bord...</span>
+            <span className="text-sm">Loading dashboard data...</span>
           </div>
         </div>
       )}
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-4">
         <StatCard
-          title="Utilisateurs totaux"
+          title="Total Users"
           value={fetchedStats.users}
           icon={Users}
           color="bg-blue-500"
         />
         <StatCard
-          title="Rôles utilisateurs"
+          title="User Roles"
           value={fetchedStats.roles}
           icon={Shield}
           color="bg-green-500"
         />
         <StatCard
-          title="Médecins actifs"
+          title="Active Doctors"
           value={fetchedStats.doctors}
           icon={UserMd}
           color="bg-purple-500"
         />
         <StatCard
-          title="Demandes en attente"
+          title="Pending Requests"
           value={fetchedStats.requests}
           icon={MessageSquare}
           color="bg-yellow-500"
         />
       </div>
 
+      {/* System Status and Maintenance */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-xl shadow-sm p-4 flex justify-between items-center">
           <div className="flex items-center">
             <Activity className="w-6 h-6 text-blue-500 mr-2" />
-            <span className="text-sm font-medium">Statut du système : </span>
-            <span className={`text-sm ml-2 ${error ? 'text-red-500' : 'text-green-500'}`}>
-              {error ? 'Problèmes détectés' : 'Opérationnel'}
+            <span className="text-sm font-medium">System Status: </span>
+            <span className={`text-sm ml-2 ${systemStatus === 'problems' ? 'text-red-500' : 'text-green-500'}`}>
+              {systemStatus === 'problems' ? 'Problems Detected' : 'Operational'}
             </span>
           </div>
-          <span className="text-xs text-gray-500">Dernière vérification : il y a 2 min</span>
+          <span className="text-xs text-gray-500">Last checked: {lastChecked}</span>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-4 flex justify-between items-center">
           <div className="flex items-center">
             <Calendar className="w-6 h-6 text-purple-500 mr-2" />
-            <span className="text-sm font-medium">Prochaine maintenance : </span>
-            <span className="text-sm ml-2">25 mars 2024</span>
+            <span className="text-sm font-medium">Next Maintenance: </span>
+            <span className="text-sm ml-2">March 25, 2024</span>
           </div>
-          <span className="text-xs text-gray-500">Dans 5 jours</span>
+          <span className="text-xs text-gray-500">In 5 days</span>
         </div>
       </div>
 
+      {/* Recent Activity and Notifications */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-xl shadow-sm p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">Activité récente</h3>
+            <h3 className="text-lg font-semibold text-gray-800">Recent Activity</h3>
             <Activity className="w-5 h-5 text-gray-400" />
           </div>
           <div className="space-y-3">
@@ -257,7 +298,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
         </div>
         <div className="bg-white rounded-xl shadow-sm p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">Notifications système</h3>
+            <h3 className="text-lg font-semibold text-gray-800">System Notifications</h3>
             <Bell className="w-5 h-5 text-gray-400" />
           </div>
           <div className="space-y-3">
@@ -266,9 +307,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                 <div className="flex items-center">
                   <div
                     className={`w-2 h-2 rounded-full mr-2 ${
-                      notification.type === "critique"
+                      notification.type === "critical"
                         ? "bg-red-500"
-                        : notification.type === "avertissement"
+                        : notification.type === "warning"
                         ? "bg-yellow-500"
                         : "bg-blue-500"
                     }`}
@@ -277,9 +318,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                 </div>
                 <span
                   className={`text-xs font-medium ${
-                    notification.type === "critique"
+                    notification.type === "critical"
                       ? "text-red-500"
-                      : notification.type === "avertissement"
+                      : notification.type === "warning"
                       ? "text-yellow-500"
                       : "text-blue-500"
                   }`}
@@ -292,19 +333,20 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
         </div>
       </div>
 
+      {/* Recent Requests Table */}
       <div className="bg-white rounded-xl shadow-sm p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Demandes récentes</h3>
-          <button className="text-sm text-blue-500 hover:text-blue-600">Voir tout</button>
+          <h3 className="text-lg font-semibold text-gray-800">Recent Requests</h3>
+          <button className="text-sm text-blue-500 hover:text-blue-600">View All</button>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Demandeur</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Requester</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -317,7 +359,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                       request.valide ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {request.valide ? 'Résolu' : 'En attente'}
+                      {request.valide ? 'Resolved' : 'Pending'}
                     </span>
                   </td>
                 </tr>

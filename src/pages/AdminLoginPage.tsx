@@ -15,46 +15,52 @@ const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !password || !role) {
-      setError("Veuillez remplir tous les champs et sélectionner un rôle");
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      const response = await axiosInstance.post('/user/login', {
-        username,
-        password,
-        remember_me: true
-      });
-      const userData = response.data.data;
-      const userRoles = userData.roles.map((roleObj: { name: string }) => roleObj.name);
-      // Sauvegarder le token d'accès dans localStorage
-      localStorage.setItem('authToken', response.data.access_token);
-      // Vérifier si le rôle sélectionné est présent dans les rôles de l'utilisateur
-      const roleMapping = { Standard: 'Admin', Accountant: 'Comptable' };
-      const selectedRole = roleMapping[role as keyof typeof roleMapping];
-      if (userRoles.includes(selectedRole)) {
-        // Sauvegarder les données utilisateur
-        localStorage.setItem('userData', JSON.stringify(userData));
-        // Rediriger en fonction du rôle sélectionné
-        if (selectedRole === 'Admin') {
-          navigate('/admin');
-        } else if (selectedRole === 'Comptable') {
-          navigate('/accountant');
-        }
-      } else {
-        setError(`Vous n'êtes pas autorisé à vous connecter avec ce rôle ou vous ne possédez pas le rôle requis.`);
+  e.preventDefault();
+  if (!username || !password || !role) {
+    setError("Veuillez remplir tous les champs et sélectionner un rôle");
+    setTimeout(() => setError(''), 3000);
+    return;
+  }
+  setLoading(true);
+  setError('');
+  try {
+    const response = await axiosInstance.post('/user/login', {
+      username,
+      password,
+      remember_me: true
+    });
+    const userData = response.data.data;
+    const userRoles = userData.roles.map((roleObj: { name: string }) => roleObj.name);
+    
+    // Save the token in localStorage
+    localStorage.setItem('authToken', response.data.access_token);
+    localStorage.setItem('userData', JSON.stringify(userData));
+
+    // Map role selection to actual role name
+    const roleMapping = { Standard: 'Admin', Accountant: 'Comptable' };
+    const selectedRole = roleMapping[role as keyof typeof roleMapping];
+
+    // Save the selected role explicitly
+   localStorage.setItem('selectedRole', selectedRole.toLowerCase());
+
+
+    if (userRoles.includes(selectedRole)) {
+      // Redirect according to the selected role
+      if (selectedRole === 'Admin') {
+        navigate('/admin');
+      } else if (selectedRole === 'Comptable') {
+        navigate('/accountant');
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.Messages || "Échec de la connexion. Veuillez réessayer.";
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+    } else {
+      setError(`Vous n'êtes pas autorisé à vous connecter avec ce rôle ou vous ne possédez pas le rôle requis.`);
     }
-  };
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.Messages || "Échec de la connexion. Veuillez réessayer.";
+    setError(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleRoleSelection = (selectedRole: string) => {
     setRole(selectedRole);

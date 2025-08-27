@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Users, Shield, User as UserMd, MessageSquare, Settings, Calendar } from 'lucide-react';
+import { LayoutDashboard, Users, Shield, User as UserMd, MessageSquare, Settings, Calendar, Activity } from 'lucide-react';
 import { getUserInitials, getUserFromStorage } from '../utils/userUtils';
 
 interface AdminSidebarProps {
@@ -14,9 +14,9 @@ const menuItems = [
   { icon: Users, label: 'Utilisateurs', id: 'users' },
   { icon: Shield, label: 'Rôles', id: 'roles' },
   { icon: UserMd, label: 'Médecins', id: 'doctors' },
-  // { icon: Settings, label: 'Paramètres médecin', id: 'doctor-settings' },
   { icon: Calendar, label: 'Rendez-vous', id: 'appointments' },
-{ icon: MessageSquare, label: 'Requests', id: 'requests' }, 
+  { icon: MessageSquare, label: 'Requests', id: 'requests' },
+  { icon: Activity, label: 'Activités', id: 'activities' },
 ];
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({

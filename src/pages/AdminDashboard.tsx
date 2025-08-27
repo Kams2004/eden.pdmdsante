@@ -7,6 +7,7 @@ import Roles from './admin/Roles';
 import Doctors from './admin/Doctors';
 import DoctorSettings from './admin/DoctorSettings';
 import Requests from './admin/Requests';
+import Activities from './admin/Activities';
 import backgroundImage from './61804.jpg';
 import AppointmentManagement from '../components/admin/AppointmentManagement';
 import { useNavigate } from 'react-router-dom';
@@ -16,12 +17,12 @@ const AdminDashboard: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showLanguages, setShowLanguages] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
-
+  
   const user = {
     name: "Admin User",
     initials: "AU"
   };
-
+  
   const stats = {
     users: 1250,
     roles: 8,
@@ -45,6 +46,8 @@ const AdminDashboard: React.FC = () => {
         return <DoctorSettings />;
       case 'appointments':
         return <AppointmentManagement />;
+      case 'activities':
+        return <Activities />;
       default:
         return <Dashboard stats={stats} />;
     }
@@ -72,7 +75,6 @@ const AdminDashboard: React.FC = () => {
           onMenuClick={setCurrentView}
           currentView={currentView}
         />
-
         <main className="ml-24 w-full transition-all duration-300">
           {renderView()}
         </main>

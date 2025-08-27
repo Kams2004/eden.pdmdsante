@@ -12,6 +12,9 @@ import axiosInstance from '../../api/axioConfig';
 interface SettingsViewProps {
   onProfileUpdate?: () => void;
 }
+ const handlePhoneCall = (phoneNumber: string) => {
+    window.open(`tel:${phoneNumber}`, '_self');
+  };
 
 const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -391,12 +394,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                       name="doctorEmail"
                       value={formData.doctorEmail}
                       onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        formErrors.doctorEmail ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+
                       placeholder="Entrez votre email"
-                      disabled={isLoading}
-                      required
+                        disabled={true}
+                    readOnly
                     />
                     {formErrors.doctorEmail && (
                       <p className="text-red-500 text-xs mt-1">{formErrors.doctorEmail}</p>
@@ -479,13 +481,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                       type="text"
                       name="doctorNO"
                       value={formData.doctorNO}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        formErrors.doctorNO ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
+            
+               className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
                       placeholder="Entrez votre numéro de médecin"
-                      disabled={isLoading}
-                      required
+                      disabled={true}
+                    readOnly
                     />
                     {formErrors.doctorNO && (
                       <p className="text-red-500 text-xs mt-1">{formErrors.doctorNO}</p>
@@ -520,10 +520,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
                     type="text"
                     name="doctorFederationID"
                     value={formData.doctorFederationID}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                 
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
                     placeholder="Entrez votre ID de fédération"
-                    disabled={isLoading}
+                   disabled={true}
+                    readOnly
                   />
                 </div>
               </div>

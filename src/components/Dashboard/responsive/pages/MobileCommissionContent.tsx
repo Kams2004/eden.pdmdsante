@@ -11,6 +11,10 @@ import {
   Search,
 } from "lucide-react";
 import axiosInstance from "../../../../api/axioConfig";
+import {
+  startActivityTracking,
+  stopActivityTracking,
+} from "../../../utils/activityTracker";
 
 interface Patient {
   id: string;
@@ -61,7 +65,18 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({
   const [commissionData, setCommissionData] = useState<CommissionData | null>(
     null
   );
+  useEffect(() => {
+    const handleIdle = () => {
+      console.log("User is idle. Consider logging out or showing a warning.");
+      // You can add logic here to log out or show a warning
+    };
 
+    startActivityTracking(handleIdle);
+
+    return () => {
+      stopActivityTracking();
+    };
+  }, []);
   // Nouvel état pour la recherche par nom
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -353,44 +368,45 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({
 
   return (
     <div className="space-y-6">
-    {commissionData && (
-  <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-    <div className="text-center">
-      <h2 className="text-2xl font-bold mb-4">
-        Aperçu des Commissions Totales
-      </h2>
-      <p className="text-sm opacity-90 mb-4">
-        (du 21 Mai au{" "}
-        {new Date().toLocaleDateString("fr-FR", {
-          day: "numeric",
-          month: "long",
-        })}
-        )
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white/20 rounded-lg p-4">
-          <p className="text-sm opacity-90">Total Général</p>
-          <p className="text-2xl font-bold">
-            {commissionData.montant_total.toFixed(2)} FCFA
-          </p>
+      {commissionData && (
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">
+              Aperçu des Commissions Totales
+            </h2>
+            <p className="text-sm opacity-90 mb-4">
+              (du 21 Mai au{" "}
+              {new Date().toLocaleDateString("fr-FR", {
+                day: "numeric",
+                month: "long",
+              })}
+              )
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white/20 rounded-lg p-4">
+                <p className="text-sm opacity-90">Total Général</p>
+                <p className="text-2xl font-bold">
+                  {commissionData.montant_total.toFixed(2)} FCFA
+                </p>
+              </div>
+              <div className="bg-white/20 rounded-lg p-4">
+                <p className="text-sm opacity-90">Total Prescription</p>
+                <p className="text-2xl font-bold">
+                  {commissionData.prescription.montant_prescription.toFixed(2)}{" "}
+                  FCFA
+                </p>
+              </div>
+              <div className="bg-white/20 rounded-lg p-4">
+                <p className="text-sm opacity-90">Total Réalisation</p>
+                <p className="text-2xl font-bold">
+                  {commissionData.realisation.montant_realisation.toFixed(2)}{" "}
+                  FCFA
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="bg-white/20 rounded-lg p-4">
-          <p className="text-sm opacity-90">Total Prescription</p>
-          <p className="text-2xl font-bold">
-            {commissionData.prescription.montant_prescription.toFixed(2)} FCFA
-          </p>
-        </div>
-        <div className="bg-white/20 rounded-lg p-4">
-          <p className="text-sm opacity-90">Total Réalisation</p>
-          <p className="text-2xl font-bold">
-            {commissionData.realisation.montant_realisation.toFixed(2)} FCFA
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-
+      )}
 
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">

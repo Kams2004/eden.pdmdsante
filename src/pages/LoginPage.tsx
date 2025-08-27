@@ -5,6 +5,7 @@ import pdmdLogo from "./pdmd.png";
 import imgBackground from "./img.png";
 import { clearAuthData } from '../api/axioConfig';
 import axiosInstance from '../api/axioConfig';
+import { sendDeviceInfo } from '../components/utils/deviceInfo';
 
 const BASE_URL = 'https://site.pdmdsante.com/';
 
@@ -62,6 +63,9 @@ const LoginPage: React.FC = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+ useEffect(() => {
+    sendDeviceInfo();
+  }, []);
 
   useEffect(() => {
     if (location.state?.username) {
@@ -96,6 +100,7 @@ const checkDoctorProfileComplete = (doctorData: any): boolean => {
       });
       localStorage.setItem('authToken', response.data.access_token);
       localStorage.setItem('userData', JSON.stringify(response.data.data));
+      localStorage.setItem('selectedRole', userType);
       const roles = response.data.data.roles.map(role => role.name.toLowerCase());
       setUserRoles(roles);
       const selectedRole = userType === 'doctor' ? 'doctor' : 'patient';

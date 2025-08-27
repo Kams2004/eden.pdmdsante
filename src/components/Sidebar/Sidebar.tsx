@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, User, FileText, DollarSign, Settings, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, User, FileText, DollarSign, Settings, BarChart2, Phone, HelpCircle } from 'lucide-react';
 import { getUserInitials, getUserFromStorage } from '../utils/userUtils';
 
 interface SidebarProps {
@@ -10,11 +10,10 @@ interface SidebarProps {
   isProfileComplete: boolean;
 }
 
-
 const menuItems = [
   { icon: LayoutDashboard, label: 'Tableau de bord', key: 'dashboard' },
   { icon: User, label: 'Patients', key: 'patients' },
-  { icon: FileText, label: 'Requests', key: 'request' },
+  { icon: FileText, label: 'Requêtes', key: 'request' },
   { icon: DollarSign, label: 'Commissions', key: 'commissions' },
   { icon: BarChart2, label: 'Analyse commissions', key: 'commissionAnalysis' },
   { icon: Settings, label: 'Paramètres', key: 'settings' }
@@ -25,11 +24,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   setIsExpanded,
   onMenuClick,
   currentView,
-    isProfileComplete,
+  isProfileComplete,
 }) => {
   const userData = getUserFromStorage();
   const initials = userData ? getUserInitials(userData.firstName, userData.lastName) : 'US';
   const displayName = userData?.firstName || 'Utilisateur';
+
+  const handlePhoneCall = (phoneNumber: string) => {
+    window.open(`tel:${phoneNumber}`, '_self');
+  };
 
   return (
     <aside
@@ -84,9 +87,47 @@ const Sidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
+        {/* Help Service Section */}
+        {isExpanded && (
+          <div className="mt-auto p-3 border-t border-gray-200">
+            <div className="flex items-center space-x-2 mb-2">
+              <HelpCircle className="text-blue-600" size={16} />
+              <span className="text-gray-700 font-semibold text-xs">Service d'aide</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {/* Relations publiques */}
+              <div className="space-y-1 pr-2 border-r border-gray-200">
+                <p className="text-[10px] text-gray-500 mb-1">Relations publiques:</p>
+                <div className="space-y-1">
+                  <button
+                    onClick={() => handlePhoneCall('+237696134160')}
+                    className="flex items-center space-x-1 w-full px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors group"
+                  >
+                    <Phone className="text-green-600" size={14} />
+                    <span className="text-[10px] text-gray-700 group-hover:text-blue-600">+237 696134160</span>
+                  </button>
+                </div>
+              </div>
+              {/* Service technique */}
+              <div className="space-y-1 pl-2">
+                <p className="text-[10px] text-gray-500 mb-1">Service technique:</p>
+                <div className="space-y-1">
+                  <button
+                    onClick={() => handlePhoneCall('+237695995842')}
+                    className="flex items-center space-x-1 w-full px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors group"
+                  >
+                    <Phone className="text-green-600" size={14} />
+                    <span className="text-[10px] text-gray-700 group-hover:text-blue-600">+237 695995842</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         {isExpanded && (
-          <div className="mt-auto text-center">
+          <div className="mt-4 text-center">
             <p className="text-xs text-gray-600">À votre service pour votre santé</p>
             <div className="w-8 h-0.5 bg-gradient-to-r from-blue-300 to-blue-400 mx-auto mt-2 rounded-full"></div>
           </div>

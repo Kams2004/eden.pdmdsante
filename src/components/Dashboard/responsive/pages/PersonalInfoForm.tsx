@@ -8,6 +8,10 @@ import {
   XCircle,
 } from "lucide-react";
 import axiosInstance from "../../../../api/axioConfig";
+import {
+  startActivityTracking,
+  stopActivityTracking,
+} from "../../../utils/activityTracker";
 
 interface PersonalInfo {
   firstName: string;
@@ -51,7 +55,9 @@ interface PersonalInfoFormProps {
   onProfileUpdate?: () => void;
 }
 
-const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) => {
+const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
+  onProfileUpdate,
+}) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -61,7 +67,18 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
   const [modalType, setModalType] = useState<"success" | "error">("success");
   const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const handleIdle = () => {
+      console.log("User is idle. Consider logging out or showing a warning.");
+      // You can add logic here to log out or show a warning
+    };
 
+    startActivityTracking(handleIdle);
+
+    return () => {
+      stopActivityTracking();
+    };
+  }, []);
   const [formData, setFormData] = useState<PersonalInfo>({
     firstName: "",
     lastName: "",
@@ -87,7 +104,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
       const userData = JSON.parse(localStorage.getItem("userData") || "{}");
       return userData.doctor_id || userData.id || userData.user_id;
     } catch (error) {
-      console.error("Erreur lors de la récupération de l'ID du médecin :", error);
+      console.error(
+        "Erreur lors de la récupération de l'ID du médecin :",
+        error
+      );
       return null;
     }
   };
@@ -103,7 +123,9 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
       try {
         setIsLoading(true);
         setError(null);
-        const response = await axiosInstance.get<DoctorData>(`/doctors/informations/${doctorId}`);
+        const response = await axiosInstance.get<DoctorData>(
+          `/doctors/informations/${doctorId}`
+        );
         const doctorData = response.data;
         const isComplete = doctorData.doctor_is_confirmed === true;
         setIsProfileIncomplete(!isComplete);
@@ -132,7 +154,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
           doctorPhone2: doctorData.DoctorPhone2 || "",
         });
       } catch (error) {
-        console.error("Erreur lors de la récupération des informations :", error);
+        console.error(
+          "Erreur lors de la récupération des informations :",
+          error
+        );
         setError("Échec du chargement des informations");
       } finally {
         setIsLoading(false);
@@ -148,14 +173,18 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
       if (!formData.firstName) errors.firstName = "Prénom est requis";
       if (!formData.lastName) errors.lastName = "Nom est requis";
       if (!formData.email) errors.email = "Email est requis";
-      if (!formData.dateOfBirth) errors.dateOfBirth = "Date de Naissance est requise";
-      if (!formData.placeOfBirth) errors.placeOfBirth = "Lieu de Naissance est requis";
+      if (!formData.dateOfBirth)
+        errors.dateOfBirth = "Date de Naissance est requise";
+      if (!formData.placeOfBirth)
+        errors.placeOfBirth = "Lieu de Naissance est requis";
       if (!formData.nationality) errors.nationality = "Nationalité est requise";
       if (!formData.cni) errors.cni = "CNI est requise";
     } else {
-      if (!doctorData.doctorNO) errors.doctorNO = "Numéro de Médecin est requis";
+      if (!doctorData.doctorNO)
+        errors.doctorNO = "Numéro de Médecin est requis";
       if (!doctorData.speciality) errors.speciality = "Spécialité est requise";
-      if (!doctorData.doctorFederationID) errors.doctorFederationID = "ID de Fédération est requis";
+      if (!doctorData.doctorFederationID)
+        errors.doctorFederationID = "ID de Fédération est requis";
       if (!doctorData.doctorPhone) errors.doctorPhone = "Téléphone est requis";
     }
 
@@ -220,7 +249,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
         DoctorPhone: doctorData.doctorPhone,
         DoctorPhone2: doctorData.doctorPhone2,
       };
-      const response = await axiosInstance.put(`/doctors/update/${doctorId}`, updateData);
+      const response = await axiosInstance.put(
+        `/doctors/update/${doctorId}`,
+        updateData
+      );
       return response.data;
     } catch (error) {
       console.error("Erreur lors de la mise à jour des informations :", error);
@@ -243,7 +275,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
       setError(null);
       const updateResponse = await confirmAndUpdateDoctor(doctorId);
       if (updateResponse && updateResponse.Doctor) {
-        localStorage.setItem("doctorData", JSON.stringify(updateResponse.Doctor));
+        localStorage.setItem(
+          "doctorData",
+          JSON.stringify(updateResponse.Doctor)
+        );
         localStorage.setItem("isProfileComplete", "true");
         localStorage.removeItem("showSettingsFirst");
         // Afficher la modale de succès
@@ -258,7 +293,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
     } catch (error: any) {
       // Afficher la modale d'erreur
       setModalType("error");
-      setModalMessage(error.message || "Une erreur est survenue lors de la mise à jour des informations.");
+      setModalMessage(
+        error.message ||
+          "Une erreur est survenue lors de la mise à jour des informations."
+      );
       setShowResultModal(true);
       console.error("Erreur:", error);
     } finally {
@@ -305,7 +343,8 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
             </div>
             <div>
               <p className="font-medium">
-                Veuillez compléter vos informations avant d'accéder aux autres sections.
+                Veuillez compléter vos informations avant d'accéder aux autres
+                sections.
               </p>
             </div>
           </div>
@@ -350,7 +389,9 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
             <div className="flex items-center mb-8">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mr-3 shadow-md"></div>
               <h2 className="text-2xl font-semibold text-gray-900">
-                {currentStep === 1 ? "Informations Personnelles" : "Informations Professionnelles"}
+                {currentStep === 1
+                  ? "Informations Personnelles"
+                  : "Informations Professionnelles"}
               </h2>
             </div>
             {currentStep === 1 ? (
@@ -364,15 +405,21 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                     <input
                       type="text"
                       value={formData.firstName}
-                      onChange={(e) => handleInputChange("firstName", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("firstName", e.target.value)
+                      }
                       className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        formErrors.firstName ? "border-red-500" : "border-gray-300"
+                        formErrors.firstName
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                       placeholder="Entrez votre prénom"
                       disabled={isLoading}
                     />
                     {formErrors.firstName && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.firstName}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {formErrors.firstName}
+                      </p>
                     )}
                   </div>
                   <div>
@@ -382,15 +429,21 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                     <input
                       type="text"
                       value={formData.lastName}
-                      onChange={(e) => handleInputChange("lastName", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("lastName", e.target.value)
+                      }
                       className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        formErrors.lastName ? "border-red-500" : "border-gray-300"
+                        formErrors.lastName
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                       placeholder="Entrez votre nom"
                       disabled={isLoading}
                     />
                     {formErrors.lastName && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.lastName}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {formErrors.lastName}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -403,15 +456,18 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                     <input
                       type="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        formErrors.email ? "border-red-500" : "border-gray-300"
-                      }`}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
                       placeholder="Entrez votre email"
-                      disabled={isLoading}
+                      disabled={true}
+                      readOnly
                     />
                     {formErrors.email && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.email}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {formErrors.email}
+                      </p>
                     )}
                   </div>
                   <div>
@@ -421,15 +477,21 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                     <input
                       type="date"
                       value={formData.dateOfBirth}
-                      onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("dateOfBirth", e.target.value)
+                      }
                       className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        formErrors.dateOfBirth ? "border-red-500" : "border-gray-300"
+                        formErrors.dateOfBirth
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                       placeholder="jj/mm/aaaa"
                       disabled={isLoading}
                     />
                     {formErrors.dateOfBirth && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.dateOfBirth}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {formErrors.dateOfBirth}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -442,15 +504,21 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                     <input
                       type="text"
                       value={formData.placeOfBirth}
-                      onChange={(e) => handleInputChange("placeOfBirth", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("placeOfBirth", e.target.value)
+                      }
                       className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        formErrors.placeOfBirth ? "border-red-500" : "border-gray-300"
+                        formErrors.placeOfBirth
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                       placeholder="Entrez votre lieu de naissance"
                       disabled={isLoading}
                     />
                     {formErrors.placeOfBirth && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.placeOfBirth}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {formErrors.placeOfBirth}
+                      </p>
                     )}
                   </div>
                   <div>
@@ -460,15 +528,21 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                     <input
                       type="text"
                       value={formData.nationality}
-                      onChange={(e) => handleInputChange("nationality", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("nationality", e.target.value)
+                      }
                       className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        formErrors.nationality ? "border-red-500" : "border-gray-300"
+                        formErrors.nationality
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                       placeholder="Entrez votre nationalité"
                       disabled={isLoading}
                     />
                     {formErrors.nationality && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.nationality}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {formErrors.nationality}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -488,7 +562,9 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                     disabled={isLoading}
                   />
                   {formErrors.cni && (
-                    <p className="text-red-500 text-xs mt-1">{formErrors.cni}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {formErrors.cni}
+                    </p>
                   )}
                 </div>
               </div>
@@ -502,16 +578,14 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                   <input
                     type="text"
                     value={doctorData.doctorNO}
-                    onChange={(e) => handleInputChange("doctorNO", e.target.value, true)}
-                    className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                      formErrors.doctorNO ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
                     placeholder="Entrez votre numéro de médecin"
-                    disabled={isLoading}
+                    disabled={true}
+                    readOnly
                   />
-                  {formErrors.doctorNO && (
-                    <p className="text-red-500 text-xs mt-1">{formErrors.doctorNO}</p>
-                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Ce champ ne peut pas être modifié
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -520,15 +594,21 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                   <input
                     type="text"
                     value={doctorData.speciality}
-                    onChange={(e) => handleInputChange("speciality", e.target.value, true)}
-                    className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                      formErrors.speciality ? "border-red-500" : "border-gray-300"
+                    onChange={(e) =>
+                      handleInputChange("speciality", e.target.value, true)
+                    }
+                    className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                      formErrors.speciality
+                        ? "border-red-500"
+                        : "border-gray-300"
                     }`}
                     placeholder="Entrez votre spécialité"
                     disabled={isLoading}
                   />
                   {formErrors.speciality && (
-                    <p className="text-red-500 text-xs mt-1">{formErrors.speciality}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {formErrors.speciality}
+                    </p>
                   )}
                 </div>
                 <div>
@@ -538,16 +618,14 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                   <input
                     type="text"
                     value={doctorData.doctorFederationID}
-                    onChange={(e) => handleInputChange("doctorFederationID", e.target.value, true)}
-                    className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                      formErrors.doctorFederationID ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
                     placeholder="Entrez votre ID de fédération"
-                    disabled={isLoading}
+                    disabled={true}
+                    readOnly
                   />
-                  {formErrors.doctorFederationID && (
-                    <p className="text-red-500 text-xs mt-1">{formErrors.doctorFederationID}</p>
-                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Ce champ ne peut pas être modifié
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -557,15 +635,21 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                     <input
                       type="text"
                       value={doctorData.doctorPhone}
-                      onChange={(e) => handleInputChange("doctorPhone", e.target.value, true)}
-                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
-                        formErrors.doctorPhone ? "border-red-500" : "border-gray-300"
+                      onChange={(e) =>
+                        handleInputChange("doctorPhone", e.target.value, true)
+                      }
+                      className={`w-full px-4 py-3 border rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors ${
+                        formErrors.doctorPhone
+                          ? "border-red-500"
+                          : "border-gray-300"
                       }`}
                       placeholder="Entrez votre numéro de téléphone"
                       disabled={isLoading}
                     />
                     {formErrors.doctorPhone && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.doctorPhone}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {formErrors.doctorPhone}
+                      </p>
                     )}
                   </div>
                   <div>
@@ -575,8 +659,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ onProfileUpdate }) 
                     <input
                       type="text"
                       value={doctorData.doctorPhone2}
-                      onChange={(e) => handleInputChange("doctorPhone2", e.target.value, true)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
+                      onChange={(e) =>
+                        handleInputChange("doctorPhone2", e.target.value, true)
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg hover:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-colors"
                       placeholder="Entrez votre second numéro de téléphone"
                       disabled={isLoading}
                     />

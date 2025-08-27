@@ -57,7 +57,7 @@ const MobileStatsCards: React.FC = () => {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
-    const parts = formattedAmount.split(' ');
+    const parts = formattedAmount.split(' ');
     const numericAmount = parts[0];
     const currency = parts[1] ? parts[1] : 'XAF';
     return { numericAmount, currency };
@@ -77,10 +77,38 @@ const MobileStatsCards: React.FC = () => {
 
   const getDateRangeDescription = () => {
     const currentDate = new Date();
-    const previousMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 21);
-    const formattedPreviousMonth = previousMonth.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-    const formattedCurrentDate = currentDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-    return `(du ${formattedPreviousMonth} au ${formattedCurrentDate})`;
+    const currentDay = currentDate.getDate();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    let cycleStartDate: Date;
+    let cycleEndDate: Date;
+    
+    if (currentDay >= 21) {
+      // We are in the cycle that started on the 21st of this month
+      cycleStartDate = new Date(currentYear, currentMonth, 21);
+      cycleEndDate = new Date(currentYear, currentMonth + 1, 21);
+    } else {
+      // We are in the cycle that started on the 21st of the previous month
+      cycleStartDate = new Date(currentYear, currentMonth - 1, 21);
+      cycleEndDate = new Date(currentYear, currentMonth, 21);
+    }
+    
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('fr-FR', { 
+        day: 'numeric', 
+        month: 'short',
+        year: currentYear !== date.getFullYear() ? 'numeric' : undefined 
+      });
+    };
+    
+    const formattedStartDate = formatDate(cycleStartDate);
+    const formattedCurrentDate = currentDate.toLocaleDateString('fr-FR', { 
+      day: 'numeric', 
+      month: 'short' 
+    });
+    
+    return `(du ${formattedStartDate} au ${formattedCurrentDate})`;
   };
 
   if (loading) {

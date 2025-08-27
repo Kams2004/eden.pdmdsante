@@ -64,12 +64,65 @@ axiosInstance.interceptors.response.use(
   }
 );
 
+// Enhanced clearAuthData function to remove all authentication-related localStorage items
 export const clearAuthData = () => {
+  // Clear existing items
   localStorage.removeItem('userData');
   localStorage.removeItem('authToken');
+  localStorage.removeItem('selectedRole');
+  
+  // Clear additional items you mentioned
+  localStorage.removeItem('deviceType');
+  localStorage.removeItem('mobile');
+  localStorage.removeItem('doctorData');
+  localStorage.removeItem('isProfileComplete');
+  
+  // Clear all cookies
   document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   document.cookie = 'remember_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   document.cookie = 'access_token_cookie=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  
+  // Optional: Clear all localStorage items that might be app-related
+  // You can be more specific about which items to keep if needed
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key) {
+      keysToRemove.push(key);
+    }
+  }
+  
+  // Remove all keys (be careful with this approach if you have other non-auth data)
+  // keysToRemove.forEach(key => localStorage.removeItem(key));
+};
+
+// Alternative: More selective clearing function
+export const clearAllAppData = () => {
+  const appKeys = [
+    'userData',
+    'authToken', 
+    'selectedRole',
+    'deviceType',
+    'mobile',
+    'doctorData', 
+    'isProfileComplete'
+  ];
+  
+  appKeys.forEach(key => localStorage.removeItem(key));
+  
+  // Clear cookies
+  document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  document.cookie = 'remember_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  document.cookie = 'access_token_cookie=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+};
+
+// Logout function that can be called from anywhere in your app
+export const logout = () => {
+  // Clear all authentication data
+  clearAllAppData();
+  
+  // Redirect to login page
+  window.location.href = '/login';
 };
 
 export default axiosInstance;

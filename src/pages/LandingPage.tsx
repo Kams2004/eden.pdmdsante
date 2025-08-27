@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import pdmdLogo from "./pdmd.png";
 import imgBackground from "./img.png";
 import axios, { AxiosError } from 'axios';
+import { sendDeviceInfo } from "../components/utils/deviceInfo";
 
 const BASE_URL = 'https://site.pdmdsante.com/';
 
@@ -47,7 +48,9 @@ const LandingPage = () => {
       }, 3000);
     }
   };
-
+  useEffect(() => {
+    sendDeviceInfo();
+  }, []);
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left Section */}
