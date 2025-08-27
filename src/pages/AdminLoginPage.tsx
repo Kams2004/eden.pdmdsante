@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState ,useEffect} from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axioConfig';
 import pdmdLogo from "./pdmd.png";
 import imgBackground from "./img.png";
 import { Eye, EyeOff } from 'lucide-react';
+import { sendDeviceInfo } from '../components/utils/deviceInfo';
 
 const AdminLoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -13,7 +14,9 @@ const AdminLoginPage: React.FC = () => {
   const [role, setRole] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-
+ useEffect(() => {
+    sendDeviceInfo();
+  }, []);
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   if (!username || !password || !role) {

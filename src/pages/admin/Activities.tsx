@@ -14,7 +14,8 @@ import {
   Search,
   RefreshCw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from 'lucide-react';
 import axiosInstance from '../../api/axioConfig';
 
@@ -46,9 +47,12 @@ const Activities: React.FC = () => {
   const [activities, setActivities] = useState<ActivityData[]>([]);
   const [filteredActivities, setFilteredActivities] = useState<ActivityData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [filterMethod, setFilterMethod] = useState('all');
   const [filterCountry, setFilterCountry] = useState('all');
 
@@ -72,6 +76,24 @@ const Activities: React.FC = () => {
       setTimeout(() => setError(null), 5000);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const deleteAllActivities = async () => {
+    setIsDeleting(true);
+    try {
+      await axiosInstance.delete('/activity/delete/');
+      setActivities([]);
+      setFilteredActivities([]);
+      setCurrentPage(1);
+      setSuccessMessage('Toutes les activités ont été supprimées avec succès');
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err) {
+      setError('Échec de la suppression des activités');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -164,24 +186,91 @@ const Activities: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Messages d'erreur */}
+      {/* Messages d'erreur et de succès */}
       {error && (
-        <div className="fixed bottom-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg flex items-center">
+        <div className="fixed bottom-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg flex items-center z-50">
           <span>{error}</span>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg flex items-center z-50">
+          <span>{successMessage}</span>
+        </div>
+      )}
+
+      {/* Modal de confirmation de suppression */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <div className="flex items-center mb-4">
+              <div className="bg-red-100 rounded-full p-3 mr-4">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Supprimer toutes les activités
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Cette action ne peut pas être annulée.
+                </p>
+              </div>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Êtes-vous sûr de vouloir supprimer toutes les {activities.length} activités ? 
+              Cette action supprimera définitivement toutes les données d'activité.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                disabled={isDeleting}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={deleteAllActivities}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-red-300 flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Suppression...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Supprimer tout
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* En-tête */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Activités du système</h1>
-        <button
-          onClick={fetchActivities}
-          disabled={isLoading}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600 disabled:bg-blue-300"
-        >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={fetchActivities}
+            disabled={isLoading}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600 disabled:bg-blue-300"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Actualiser
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isLoading || isDeleting || activities.length === 0}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg flex items-center gap-2 hover:bg-red-600 disabled:bg-red-300"
+          >
+            <Trash2 className="w-4 h-4" />
+            Supprimer tout
+          </button>
+        </div>
       </div>
 
       {/* Filtres */}

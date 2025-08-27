@@ -14,6 +14,15 @@ import {
   AtSign,
   AlertTriangle,
   RefreshCw,
+  Grid3X3,
+  List,
+  LogIn,
+  LogOut,
+  Timer,
+  Globe,
+  MapPin,
+  Monitor,
+  Router,
 } from "lucide-react";
 
 // Définition des props pour le composant ToggleSwitch
@@ -57,6 +66,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   onCancel,
 }) => {
   if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
@@ -101,6 +111,7 @@ const ONMCErrorModal: React.FC<ONMCErrorModalProps> = ({
   onmcNumber,
 }) => {
   if (!isOpen) return null;
+
   return (
     <div className="absolute top-full mt-3 left-0 right-0 bg-red-50 border border-red-200 rounded-lg p-3 shadow-lg z-20">
       <div className="flex items-start space-x-2">
@@ -182,69 +193,44 @@ const Doctors: React.FC = () => {
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [displayMode, setDisplayMode] = useState<"kanban" | "table">("kanban");
+
   // État du modal de suppression
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [doctorToDelete, setDoctorToDelete] = useState<Doctor | null>(null);
+
   // État pour le modal d'erreur ONMC
   const [showONMCError, setShowONMCError] = useState(false);
   const [onmcErrorNumber, setOnmcErrorNumber] = useState("");
-  const itemsPerPage = 6;
+
+  const itemsPerPage = displayMode === "kanban" ? 6 : 10;
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const addButtonRef = useRef<HTMLButtonElement>(null);
-
+  const addButtonRef = useRef<HTMLButtonButton>(null);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const fetchDoctors = async () => {
-      setIsLoadingDoctors(true);
-      try {
-        const response = await axiosInstance.get("/doctors/");
-        const fetchedDoctors = response.data.map((doc: any) => ({
-          id: doc.id,
-          name: `${doc.DoctorName} ${doc.DoctorLastname}`,
-          DoctorName: doc.DoctorName,
-          DoctorLastname: doc.DoctorLastname,
-          speciality: doc.Speciality,
-          email: doc.DoctorEmail,
-          phone: doc.DoctorPhone,
-          phone2: doc.DoctorPhone2,
-          status: "active",
-          patients: 0,
-          joinDate: doc.CreatedAt,
-          DoctorCNI: doc.DoctorCNI,
-          DoctorDOB: doc.DoctorDOB,
-          DoctorFederationID: doc.DoctorFederationID,
-          DoctorNat: doc.DoctorNat,
-          DoctorPOB: doc.DoctorPOB,
-          DoctorNO: doc.DoctorNO,
-        }));
-        setDoctors(fetchedDoctors);
-        setFilteredDoctors(fetchedDoctors);
-      } catch (err) {
-        setError("Échec du chargement des médecins");
-        setTimeout(() => {
-          setError(null);
-        }, 5000);
-      } finally {
-        setIsLoadingDoctors(false);
-      }
-    };
     fetchDoctors();
   }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        searchContainerRef.current &&
-        !searchContainerRef.current.contains(event.target as Node)
+        showAddInput &&
+        inputContainerRef.current &&
+        !inputContainerRef.current.contains(event.target as Node) &&
+        addButtonRef.current &&
+        !addButtonRef.current.contains(event.target as Node)
       ) {
-        setShowDropdown(false);
+        setShowAddInput(false);
+        setNewDoctorNO("");
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [showAddInput]);
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
@@ -261,6 +247,41 @@ const Doctors: React.FC = () => {
       setShowDropdown(results.length > 0);
     }
   }, [searchTerm, doctors]);
+
+  const fetchDoctors = async () => {
+    setIsLoadingDoctors(true);
+    try {
+      const response = await axiosInstance.get("/doctors/");
+      const fetchedDoctors = response.data.map((doc: any) => ({
+        id: doc.id,
+        name: `${doc.DoctorName} ${doc.DoctorLastname}`,
+        DoctorName: doc.DoctorName,
+        DoctorLastname: doc.DoctorLastname,
+        speciality: doc.Speciality,
+        email: doc.DoctorEmail,
+        phone: doc.DoctorPhone,
+        phone2: doc.DoctorPhone2,
+        status: "active",
+        patients: 0,
+        joinDate: doc.CreatedAt,
+        DoctorCNI: doc.DoctorCNI,
+        DoctorDOB: doc.DoctorDOB,
+        DoctorFederationID: doc.DoctorFederationID,
+        DoctorNat: doc.DoctorNat,
+        DoctorPOB: doc.DoctorPOB,
+        DoctorNO: doc.DoctorNO,
+      }));
+      setDoctors(fetchedDoctors);
+      setFilteredDoctors(fetchedDoctors);
+    } catch (err) {
+      setError("Échec du chargement des médecins");
+      setTimeout(() => {
+        setError(null);
+      }, 5000);
+    } finally {
+      setIsLoadingDoctors(false);
+    }
+  };
 
   // Function to check if ONMC number already exists in loaded data
   const checkONMCExists = (onmcNumber: string): boolean => {
@@ -403,6 +424,7 @@ const Doctors: React.FC = () => {
 
   const handleSaveEdit = async () => {
     if (!editingDoctor) return;
+
     const updateData = {
       DoctorCNI: editingDoctor.DoctorCNI,
       DoctorDOB: editingDoctor.DoctorDOB,
@@ -416,6 +438,7 @@ const Doctors: React.FC = () => {
       Speciality: editingDoctor.speciality,
       id: editingDoctor.id,
     };
+
     try {
       const response = await axiosInstance.put(
         `/doctors/update/${editingDoctor.id}`,
@@ -464,6 +487,15 @@ const Doctors: React.FC = () => {
   );
   const totalPages = Math.ceil(filteredDoctors.length / itemsPerPage);
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  };
+
   return (
     <div className="space-y-4 relative">
       {/* Messages d'erreur et de succès */}
@@ -478,6 +510,7 @@ const Doctors: React.FC = () => {
           </div>
         </div>
       )}
+
       {loadSuccess && (
         <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg flex items-center">
           <span>Médecins chargés avec succès !</span>
@@ -489,6 +522,7 @@ const Doctors: React.FC = () => {
           </div>
         </div>
       )}
+
       <div className="fixed bottom-4 right-4 flex flex-col space-y-2">
         {updateSuccess && (
           <div className="bg-green-500 text-white p-4 rounded-lg shadow-lg flex items-center">
@@ -501,11 +535,22 @@ const Doctors: React.FC = () => {
           </div>
         )}
       </div>
+
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">
           Gestion des médecins
         </h1>
         <div className="flex gap-4">
+          <button
+            onClick={() => fetchDoctors()}
+            disabled={isLoadingDoctors}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600 disabled:bg-blue-300"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${isLoadingDoctors ? "animate-spin" : ""}`}
+            />
+            Actualiser
+          </button>
           <button
             onClick={handleLoadDoctors}
             disabled={isLoadingDoctors}
@@ -529,13 +574,17 @@ const Doctors: React.FC = () => {
                 setShowAddInput(true);
                 setTimeout(() => inputRef.current?.focus(), 100);
               }}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center gap-2 hover:bg-blue-600"
+              className="px-4 py-2 bg-indigo-500 text-white rounded-lg flex items-center gap-2 hover:bg-indigo-600"
             >
               <Plus className="w-4 h-4" />
               Ajouter un médecin
             </button>
             {showAddInput && (
-              <div className="absolute top-full mt-2 right-0 bg-white rounded-lg shadow-lg border p-2 min-w-[300px]">
+              <div
+                ref={inputContainerRef}
+                className="absolute top-full mt-2 right-0 bg-white rounded-lg shadow-lg border p-2 min-w-[300px]"
+              >
+                {/* Input field and button */}
                 <div className="relative">
                   <div className="flex items-center">
                     <input
@@ -565,7 +614,7 @@ const Doctors: React.FC = () => {
                       </button>
                     )}
                   </div>
-                  {/* Modal d'erreur ONMC */}
+                  {/* ONMC Error Modal */}
                   <ONMCErrorModal
                     isOpen={showONMCError}
                     onmcNumber={onmcErrorNumber}
@@ -576,6 +625,7 @@ const Doctors: React.FC = () => {
           </div>
         </div>
       </div>
+
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="flex justify-between items-center mb-6">
           <div className="relative w-64" ref={searchContainerRef}>
@@ -610,12 +660,50 @@ const Doctors: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
-        {filteredDoctors.length === 0 ? (
-          <div className="flex justify-center items-center h-64 bg-gray-100 rounded-lg">
-            <UserMd className="w-16 h-16 text-gray-300" />
+
+          {/* Display Mode Toggle */}
+          <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setDisplayMode("kanban")}
+              className={`p-2 rounded-md flex items-center gap-2 transition-colors ${
+                displayMode === "kanban"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              <Grid3X3 className="w-4 h-4" />
+              <span className="text-sm">Kanban</span>
+            </button>
+            <button
+              onClick={() => setDisplayMode("table")}
+              className={`p-2 rounded-md flex items-center gap-2 transition-colors ${
+                displayMode === "table"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              <List className="w-4 h-4" />
+              <span className="text-sm">Table</span>
+            </button>
           </div>
-        ) : (
+        </div>
+
+        {isLoadingDoctors ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="w-4 h-4 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="w-4 h-4 bg-blue-500 rounded-full animate-bounce"></div>
+            </div>
+          </div>
+        ) : filteredDoctors.length === 0 ? (
+          <div className="flex justify-center items-center h-64 bg-gray-100 rounded-lg">
+            <div className="text-center">
+              <UserMd className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">Aucun médecin trouvé</p>
+            </div>
+          </div>
+        ) : displayMode === "kanban" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {currentDoctors.map((doctor) => (
               <div
@@ -686,35 +774,193 @@ const Doctors: React.FC = () => {
                     {doctor.status === "active" ? "Actif" : "Inactif"}
                   </span>
                   <span className="text-sm text-gray-500">
-                    {doctor.patients} patients
+                    Ajouté le {formatDate(doctor.joinDate)}
                   </span>
                 </div>
               </div>
             ))}
           </div>
+        ) : (
+          // Table View
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Médecin
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Spécialité
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ONMC / Fédération
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date d'ajout
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {currentDoctors.map((doctor) => (
+                  <tr key={doctor.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <UserMd className="w-8 h-8 text-blue-500 bg-blue-100 rounded-full p-2 mr-3" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {doctor.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            ID: {doctor.id}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                        {doctor.speciality}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Mail className="w-4 h-4 text-gray-400 mr-2" />
+                          {doctor.email}
+                        </div>
+                        <div className="flex items-center">
+                          <Phone className="w-4 h-4 text-gray-400 mr-2" />
+                          {doctor.phone}
+                        </div>
+                        {doctor.phone2 && (
+                          <div className="flex items-center">
+                            <Phone className="w-4 h-4 text-gray-400 mr-2" />
+                            {doctor.phone2}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="space-y-1">
+                        <div>
+                          <span className="font-medium">ONMC:</span>{" "}
+                          {doctor.DoctorNO}
+                        </div>
+                        <div>
+                          <span className="font-medium">Fédération:</span>{" "}
+                          {doctor.DoctorFederationID}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatDate(doctor.joinDate)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          doctor.status === "active"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {doctor.status === "active" ? "Actif" : "Inactif"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex space-x-2 justify-end">
+                        <button
+                          onClick={() => handleEdit(doctor)}
+                          className="text-indigo-600 hover:text-indigo-900 p-1 hover:bg-indigo-100 rounded"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(doctor)}
+                          className="text-red-600 hover:text-red-900 p-1 hover:bg-red-100 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-        <div className="flex justify-center mt-6">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-4 py-2 mx-1 bg-gray-200 rounded-lg disabled:opacity-50"
-          >
-            Précédent
-          </button>
-          <span className="px-4 py-2 mx-1 bg-gray-100 rounded-lg">
-            Page {currentPage} sur {totalPages}
-          </span>
-          <button
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
-            disabled={currentPage === totalPages}
-            className="px-4 py-2 mx-1 bg-gray-200 rounded-lg disabled:opacity-50"
-          >
-            Suivant
-          </button>
-        </div>
+
+        {/* Pagination */}
+        {filteredDoctors.length > 0 && (
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 mt-6">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+              >
+                Précédent
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+              >
+                Suivant
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Affichage de{" "}
+                  <span className="font-medium">{indexOfFirstItem + 1}</span> à{" "}
+                  <span className="font-medium">
+                    {Math.min(indexOfLastItem, filteredDoctors.length)}
+                  </span>{" "}
+                  sur{" "}
+                  <span className="font-medium">{filteredDoctors.length}</span>{" "}
+                  médecins
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Précédent
+                  </button>
+                  <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                    Page {currentPage} sur {totalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Suivant
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
       {/* Modal d'édition de médecin */}
       {isModalOpen && editingDoctor && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -907,6 +1153,7 @@ const Doctors: React.FC = () => {
           </div>
         </div>
       )}
+
       {/* Modal de confirmation de suppression */}
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
