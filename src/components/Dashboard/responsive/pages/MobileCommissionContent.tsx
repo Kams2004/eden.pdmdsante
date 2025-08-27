@@ -375,7 +375,7 @@ const MobileCommissionContent: React.FC<MobileCommissionContentProps> = ({
               Aperçu des Commissions Totales
             </h2>
             <p className="text-sm opacity-90 mb-4">
-              (du 21 Mai au{" "}
+              (du 21 Août au{" "}
               {new Date().toLocaleDateString("fr-FR", {
                 day: "numeric",
                 month: "long",

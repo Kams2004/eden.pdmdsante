@@ -13,6 +13,7 @@ import {
   Activity,
   Search,
 } from "lucide-react";
+import { startActivityTracking, stopActivityTracking } from "../utils/activityTracker";
 
 interface Patient {
   id: string;
@@ -117,7 +118,18 @@ const CommissionView: React.FC<CommissionViewProps> = ({
       setLoading(false);
     }
   };
+  useEffect(() => {
+    const handleIdle = () => {
+      console.log("User is idle. Consider logging out or showing a warning.");
+      // You can add logic here to log out or show a warning
+    };
 
+    startActivityTracking(handleIdle);
+
+    return () => {
+      stopActivityTracking();
+    };
+  }, []);
   useEffect(() => {
     fetchPatientsData();
   }, []);
@@ -364,7 +376,7 @@ const CommissionView: React.FC<CommissionViewProps> = ({
               Aperçu des Commissions Totales
             </h2>
             <p className="text-sm opacity-90 mb-4">
-              (du 21 Mai au{" "}
+              (du 21 Août au{" "}
               {new Date().toLocaleDateString("fr-FR", {
                 day: "numeric",
                 month: "long",
