@@ -3,6 +3,7 @@ import { Eye, EyeOff, FileText, Wallet } from 'lucide-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPrescriptionBottle, faTasks } from '@fortawesome/free-solid-svg-icons';
 import axiosInstance from "../../api/axioConfig";
+import { startActivityTracking, stopActivityTracking } from '../utils/activityTracker';
 
 interface CommissionData {
   totalAmount: number;
@@ -30,6 +31,53 @@ const CommissionOverview: React.FC<CommissionOverviewProps> = ({ showAmount, set
     montantRealisation: 0,
   });
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Function to get the date range description (copied from MobileStatsCards)
+  const getDateRangeDescription = () => {
+    const currentDate = new Date();
+    const currentDay = currentDate.getDate();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+
+    let cycleStartDate: Date;
+    let cycleEndDate: Date;
+
+    if (currentDay >= 21) {
+      // We are in the cycle that started on the 21st of this month
+      cycleStartDate = new Date(currentYear, currentMonth, 21);
+      cycleEndDate = new Date(currentYear, currentMonth + 1, 21);
+    } else {
+      // We are in the cycle that started on the 21st of the previous month
+      cycleStartDate = new Date(currentYear, currentMonth - 1, 21);
+      cycleEndDate = new Date(currentYear, currentMonth, 21);
+    }
+
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'short',
+        year: currentYear !== date.getFullYear() ? 'numeric' : undefined
+      });
+    };
+
+    const formattedStartDate = formatDate(cycleStartDate);
+    const formattedCurrentDate = currentDate.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short'
+    });
+
+    return `(du ${formattedStartDate} au ${formattedCurrentDate})`;
+  };
+
+  useEffect(() => {
+    const handleIdle = () => {
+      console.log("User is idle. Consider logging out or showing a warning.");
+    };
+    startActivityTracking(handleIdle);
+    return () => {
+      stopActivityTracking();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,7 +108,6 @@ const CommissionOverview: React.FC<CommissionOverviewProps> = ({ showAmount, set
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
@@ -71,20 +118,10 @@ const CommissionOverview: React.FC<CommissionOverviewProps> = ({ showAmount, set
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
-
     const parts = formattedAmount.split(' ');
     const numericAmount = parts[0];
     const currency = parts[1] ? parts[1] : 'XAF';
-
     return { numericAmount, currency };
-  };
-
-  const getDateRangeDescription = () => {
-    const currentDate = new Date();
-    const previousMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 21);
-    const formattedPreviousMonth = previousMonth.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-    const formattedCurrentDate = currentDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-    return `(du ${formattedPreviousMonth} au ${formattedCurrentDate})`;
   };
 
   if (loading) {
@@ -125,7 +162,6 @@ const CommissionOverview: React.FC<CommissionOverviewProps> = ({ showAmount, set
       <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
         <div className="absolute bottom-0 left-0 w-12 h-12 bg-blue-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
-
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <Wallet className="w-6 h-6 text-blue-600 mr-2" />

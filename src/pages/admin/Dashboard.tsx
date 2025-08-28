@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axiosInstance from '../../api/axioConfig';
 import { Users, Shield, User as UserMd, MessageSquare, Activity, Calendar, Bell, X } from 'lucide-react';
+import { sendDeviceInfo } from '../../components/utils/deviceInfo';
 
 interface Request {
   id: number;
@@ -132,7 +133,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
 
     fetchData();
   }, [stats.roles]);
-
+ useEffect(() => {
+    sendDeviceInfo();
+  }, []);
   // Vérification périodique du statut du système
   useEffect(() => {
     const heartbeatInterval = setInterval(async () => {

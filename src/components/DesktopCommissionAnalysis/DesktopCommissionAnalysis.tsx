@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, Calendar, TrendingUp, Users, DollarSign, FileText, ChevronDown, ChevronUp, Filter, Eye, EyeOff } from 'lucide-react';
 import axiosInstance from "../../api/axioConfig";
+import { startActivityTracking, stopActivityTracking } from '../utils/activityTracker';
 
 interface MonthlyData {
   list_patient_name: string[];
@@ -78,7 +79,18 @@ const DesktopCommissionAnalysis: React.FC = () => {
     const { doctor_id } = JSON.parse(userData);
     return doctor_id;
   };
+  useEffect(() => {
+    const handleIdle = () => {
+      console.log("User is idle. Consider logging out or showing a warning.");
+      // You can add logic here to log out or show a warning
+    };
 
+    startActivityTracking(handleIdle);
+
+    return () => {
+      stopActivityTracking();
+    };
+  }, []);
   const fetchMonthlyData = async () => {
     setLoading(true);
     try {

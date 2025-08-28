@@ -16,6 +16,7 @@ import CommissionOverview from '../components/Dashboard/CommissionOverview';
 import useWindowSize from '../components/Dashboard/responsive/useWindowSize';
 import MobileDoctorDashboard from '../components/Dashboard/responsive/MobileDashboard';
 import DesktopCommissionAnalysis from '../components/DesktopCommissionAnalysis/DesktopCommissionAnalysis';
+import { sendDeviceInfo } from '../components/utils/deviceInfo';
 
 interface DoctorData {
   CreatedAt: string;
@@ -54,7 +55,9 @@ function DoctorDashboard() {
   const checkDoctorProfileComplete = (doctorData: DoctorData): boolean => {
     return doctorData.doctor_is_confirmed === true;
   };
-
+ useEffect(() => {
+    sendDeviceInfo();
+  }, []);
   useEffect(() => {
     const userDataString = localStorage.getItem('userData');
     if (!userDataString) {

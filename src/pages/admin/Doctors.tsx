@@ -24,6 +24,7 @@ import {
   Monitor,
   Router,
 } from "lucide-react";
+import { sendDeviceInfo } from "../../components/utils/deviceInfo";
 
 // Définition des props pour le composant ToggleSwitch
 interface ToggleSwitchProps {
@@ -193,7 +194,7 @@ const Doctors: React.FC = () => {
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [displayMode, setDisplayMode] = useState<"kanban" | "table">("kanban");
+  const [displayMode, setDisplayMode] = useState<"Carte" | "table">("Carte");
 
   // État du modal de suppression
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -203,7 +204,7 @@ const Doctors: React.FC = () => {
   const [showONMCError, setShowONMCError] = useState(false);
   const [onmcErrorNumber, setOnmcErrorNumber] = useState("");
 
-  const itemsPerPage = displayMode === "kanban" ? 6 : 10;
+  const itemsPerPage = displayMode === "Carte" ? 6 : 10;
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const addButtonRef = useRef<HTMLButtonButton>(null);
@@ -211,7 +212,9 @@ const Doctors: React.FC = () => {
   useEffect(() => {
     fetchDoctors();
   }, []);
-
+ useEffect(() => {
+    sendDeviceInfo();
+  }, []);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -664,15 +667,15 @@ const Doctors: React.FC = () => {
           {/* Display Mode Toggle */}
           <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
             <button
-              onClick={() => setDisplayMode("kanban")}
+              onClick={() => setDisplayMode("Carte")}
               className={`p-2 rounded-md flex items-center gap-2 transition-colors ${
-                displayMode === "kanban"
+                displayMode === "Carte"
                   ? "bg-white text-blue-600 shadow-sm"
                   : "text-gray-600 hover:text-gray-800"
               }`}
             >
               <Grid3X3 className="w-4 h-4" />
-              <span className="text-sm">Kanban</span>
+              <span className="text-sm">Carte</span>
             </button>
             <button
               onClick={() => setDisplayMode("table")}
@@ -703,7 +706,7 @@ const Doctors: React.FC = () => {
               <p className="text-gray-500">Aucun médecin trouvé</p>
             </div>
           </div>
-        ) : displayMode === "kanban" ? (
+        ) : displayMode === "Carte" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {currentDoctors.map((doctor) => (
               <div

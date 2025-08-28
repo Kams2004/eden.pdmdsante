@@ -5,7 +5,7 @@ import imgBackground from "./img.png";
 import axios, { AxiosError } from 'axios';
 import { sendDeviceInfo } from "../components/utils/deviceInfo";
 
-const BASE_URL = 'https://site.pdmdsante.com/';
+const BASE_URL = 'http://65.21.73.170:1000/';
 
 const LandingPage = () => {
   const navigate = useNavigate();

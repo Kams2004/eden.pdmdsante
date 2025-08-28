@@ -12,6 +12,7 @@ import backgroundImage from './61804.jpg';
 import AppointmentManagement from '../components/admin/AppointmentManagement';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axioConfig';
+import { sendDeviceInfo } from '../components/utils/deviceInfo';
 
 const AdminDashboard: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -29,7 +30,9 @@ const AdminDashboard: React.FC = () => {
     doctors: 45,
     requests: 124
   };
-
+ useEffect(() => {
+    sendDeviceInfo();
+  }, []);
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':

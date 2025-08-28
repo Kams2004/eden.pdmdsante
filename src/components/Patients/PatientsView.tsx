@@ -10,6 +10,7 @@ import {
   Search,
 } from "lucide-react";
 import axiosInstance from "../../api/axioConfig";
+import { startActivityTracking, stopActivityTracking } from "../utils/activityTracker";
 
 interface Patient {
   id: string;
@@ -49,7 +50,18 @@ const PatientsView: React.FC<PatientsViewProps> = ({
 
   const patientsPerPage = 6;
   const currentYear = new Date().getFullYear();
+  useEffect(() => {
+    const handleIdle = () => {
+      console.log("User is idle. Consider logging out or showing a warning.");
+      // You can add logic here to log out or show a warning
+    };
 
+    startActivityTracking(handleIdle);
+
+    return () => {
+      stopActivityTracking();
+    };
+  }, []);
   const fetchPatientsData = async () => {
     try {
       setLoading(true);

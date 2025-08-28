@@ -15,7 +15,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick, currentV
   const [showLanguages, setShowLanguages] = useState(false);
   const [userInitials, setUserInitials] = useState('UN');
   const navigate = useNavigate();
-  const BASE_URL = 'https://site.pdmdsante.com/';
+  const BASE_URL = 'http://65.21.73.170:1000/';
 
   useEffect(() => {
     debugUserData();

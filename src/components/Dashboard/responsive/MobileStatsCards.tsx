@@ -254,7 +254,7 @@ const MobileStatsCards: React.FC = () => {
                 <FontAwesomeIcon icon={faTasks} className="text-yellow-600" size="lg" />
               </div>
               <div>
-                <div className="text-sm font-bold text-gray-700">Montant Réalisat</div>
+                <div className="text-sm font-bold text-gray-700">Montant Réalisation</div>
                 <p className="text-gray-500 text-[0.6rem]">{getDateRangeDescription()}</p>
               </div>
             </div>

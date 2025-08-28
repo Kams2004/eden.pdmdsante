@@ -11,6 +11,7 @@ import MobileRequestsContent from "./pages/MobileRequestsContent";
 import MobileSidebar from "./MobileSidebar";
 import PersonalInfoForm from "./pages/PersonalInfoForm";
 import MobileCommissionAnalysis from "./pages/MobileCommissionAnalysis";
+import { sendDeviceInfo } from "../../utils/deviceInfo";
 
 type ViewType =
   | "dashboard"
@@ -32,6 +33,20 @@ const MobileDoctorDashboard = () => {
   const checkDoctorProfileComplete = (doctorData: any): boolean => {
     return doctorData.doctor_is_confirmed === true;
   };
+
+  useEffect(() => {
+    const handleIdle = () => {
+      console.log("User is idle. Consider logging out or showing a warning.");
+      // You can add logic here to log out or show a warning
+    };
+
+    startActivityTracking(handleIdle);
+
+    return () => {
+      stopActivityTracking();
+    };
+  }, []);
+
   useEffect(() => {
     const userDataString = localStorage.getItem("userData");
     if (!userDataString) {
@@ -67,7 +82,9 @@ const MobileDoctorDashboard = () => {
       navigate("/login");
     }
   }, [navigate]);
-
+ useEffect(() => {
+    sendDeviceInfo();
+  }, []);
   const handleMenuClick = (view: ViewType) => {
     if (view === "toggleSidebar") {
       setSidebarOpen(!sidebarOpen);
@@ -145,3 +162,11 @@ const MobileDoctorDashboard = () => {
 };
 
 export default MobileDoctorDashboard;
+function startActivityTracking(handleIdle: () => void) {
+  throw new Error("Function not implemented.");
+}
+
+function stopActivityTracking() {
+  throw new Error("Function not implemented.");
+}
+

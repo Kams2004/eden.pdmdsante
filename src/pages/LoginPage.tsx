@@ -7,7 +7,7 @@ import { clearAuthData } from '../api/axioConfig';
 import axiosInstance from '../api/axioConfig';
 import { sendDeviceInfo } from '../components/utils/deviceInfo';
 
-const BASE_URL = 'https://site.pdmdsante.com/';
+
 
 type UserType = 'doctor' | 'patient' | null;
 
