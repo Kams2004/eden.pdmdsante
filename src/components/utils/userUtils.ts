@@ -21,7 +21,7 @@ export const getUserInitials = (firstName: string, lastName: string): string => 
         lastName: userData.last_name
       };
     } catch (error) {
-      console.error('Error parsing user data:', error);
+
       return null;
     }
   };

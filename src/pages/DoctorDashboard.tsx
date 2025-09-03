@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import Header from '../components/Header/Header';
 import Sidebar from '../components/Sidebar/Sidebar';
-import StatCards from '../components/Dashboard/StatCards';
 import Actualities from '../components/Actualities/Actualities';
-import MonthlyTransactions from '../components/Dashboard/MonthlyTransactions';
 import PatientsView from '../components/Patients/PatientsView';
 import RequestsView from '../components/Requests/RequestsView';
 import SettingsView from '../components/Settings/SettingsView';
@@ -17,6 +15,7 @@ import useWindowSize from '../components/Dashboard/responsive/useWindowSize';
 import MobileDoctorDashboard from '../components/Dashboard/responsive/MobileDashboard';
 import DesktopCommissionAnalysis from '../components/DesktopCommissionAnalysis/DesktopCommissionAnalysis';
 import { sendDeviceInfo } from '../components/utils/deviceInfo';
+import ResultsView from '../components/Resultats/ResultsView';
 
 interface DoctorData {
   CreatedAt: string;
@@ -43,21 +42,60 @@ function DoctorDashboard() {
   const [showLanguages, setShowLanguages] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
   const [setSelectedPatients] = useState([]);
-  const [showAllCommissions, setShowAllCommissions] = useState(false);
-  const [showTodaysCommissions, setShowTodaysCommissions] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(true);
   const [showProfileWarning, setShowProfileWarning] = useState(false);
   const navigate = useNavigate();
   const windowSize = useWindowSize();
   const isMobile = windowSize.width < 768;
 
+  // Sample actualities data
+  const actualities = [
+    {
+      id: 1,
+      title: "Nouveau Système de Gestion des Patients",
+      date: "2024-03-15",
+      description: "Mise à jour du système pour une meilleure prise en charge des patients avec de nouvelles fonctionnalités.",
+      image: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=500&auto=format"
+    },
+    {
+      id: 2,
+      title: "Formation sur les Nouvelles Procédures",
+      date: "2024-03-12",
+      description: "Session de formation obligatoire sur les nouvelles procédures médicales et protocoles de sécurité.",
+      image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=500&auto=format"
+    },
+    {
+      id: 3,
+      title: "Mise à Jour des Équipements Médicaux",
+      date: "2024-03-10",
+      description: "Installation de nouveaux équipements de diagnostic pour améliorer la qualité des soins.",
+      image: "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=500&auto=format"
+    },
+    {
+      id: 4,
+      title: "Nouvelle Politique de Télémédecine",
+      date: "2024-03-08",
+      description: "Introduction de services de télémédecine pour étendre l'accès aux soins de santé.",
+      image: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=500&auto=format"
+    },
+    {
+      id: 5,
+      title: "Amélioration du Système de Rapports",
+      date: "2024-03-05",
+      description: "Nouveaux outils de rapport pour un suivi plus efficace des patients et des résultats.",
+      image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=500&auto=format"
+    }
+  ];
+
   // Fixed function to properly check doctor profile completion
   const checkDoctorProfileComplete = (doctorData: DoctorData): boolean => {
     return doctorData.doctor_is_confirmed === true;
   };
- useEffect(() => {
+
+  useEffect(() => {
     sendDeviceInfo();
   }, []);
+
   useEffect(() => {
     const userDataString = localStorage.getItem('userData');
     if (!userDataString) {
@@ -78,7 +116,6 @@ function DoctorDashboard() {
       if (doctorDataString) {
         try {
           const doctorData = JSON.parse(doctorDataString);
-          // Use the fixed function to check profile completion
           const isComplete = checkDoctorProfileComplete(doctorData);
           setIsProfileComplete(isComplete);
           
@@ -102,6 +139,7 @@ function DoctorDashboard() {
       setShowProfileWarning(true);
       return;
     }
+
     setCurrentView(view.toLowerCase());
     setShowProfileWarning(false);
         
@@ -121,7 +159,6 @@ function DoctorDashboard() {
   };
 
   const handleProfileUpdate = () => {
-    // This function will be called from SettingsView when profile is successfully updated
     setIsProfileComplete(true);
     setShowProfileWarning(false);
     localStorage.removeItem('showSettingsFirst');
@@ -129,26 +166,13 @@ function DoctorDashboard() {
     setCurrentView('dashboard');
   };
 
-  const actualities = [
-    {
-      id: 1,
-      title: "New Medical Equipment Arrival",
-      date: "2024-03-15",
-      description: "State-of-the-art MRI machine installed to enhance diagnostic capabilities.",
-      image: "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=500&auto=format"
-    },
-  ];
-
-  const commissionData = {
-    totalAmount: 15750,
-    invoiced: 25,
-    paid: 20,
-    registeredPercentage: 75,
-    topExaminations: [
-      { name: 'Examination 1', value: 120 },
-      { name: 'Examination 2', value: 90 },
-      { name: 'Examination 3', value: 60 },
-    ],
+  // Function to handle navigation to commission analysis
+  const handleNavigateToCommissionAnalysis = () => {
+    if (!isProfileComplete) {
+      setShowProfileWarning(true);
+      return;
+    }
+    setCurrentView('commissionanalysis');
   };
 
   return (
@@ -202,22 +226,16 @@ function DoctorDashboard() {
             <main className="w-full md:ml-24 transition-all duration-300">
               <div className="h-full overflow-y-auto no-scrollbar">
                 {currentView === 'dashboard' && isProfileComplete && (
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 gap-6">
+                    {/* Commission Overview - New restructured version */}
                     <CommissionOverview
-                      commissionData={commissionData}
-                      showAmount={showAllCommissions}
-                      setShowAmount={setShowAllCommissions}
+                      // onNavigateToAnalysis={handleNavigateToCommissionAnalysis}
                     />
-                    <StatCards
-                      showAmount={showTodaysCommissions}
-                      setShowAmount={setShowTodaysCommissions}
-                      stats={{
-                        commission: { amount: 15750, count: 25, transactions: 42 },
-                        patients: { total: 150, percentage: 75 },
-                        examinations: { total: 85, percentage: 60 }
-                      }}
-                    />
-                    <Actualities />
+
+                    {/* Actualities Section - Reactivated */}
+                    <Actualities actualities={actualities} />
+
+                    {/* Patients List */}
                     <PatientsList onDetailsClick={handleDetailsClick} />
                   </div>
                 )}
@@ -226,11 +244,14 @@ function DoctorDashboard() {
                   <PatientsView />
                 )}
                 {currentView === 'request' && isProfileComplete && <RequestsView />}
+                 {currentView === 'results' && isProfileComplete && <ResultsView />}
+
                 {currentView === 'commissions' && isProfileComplete && <CommissionView />}
                 {currentView === 'commissionanalysis' && isProfileComplete && <DesktopCommissionAnalysis />}
                 {currentView === 'settings' && (
                   <SettingsView onProfileUpdate={handleProfileUpdate} />
                 )}
+               
               </div>
             </main>
           </div>

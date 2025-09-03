@@ -1,38 +1,34 @@
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff, FileText, Wallet } from 'lucide-react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPrescriptionBottle, faTasks } from '@fortawesome/free-solid-svg-icons';
-import axiosInstance from "../../api/axioConfig";
+import { Users, FileText, CheckCircle, BarChart3, ChevronRight } from 'lucide-react';
 import { startActivityTracking, stopActivityTracking } from '../utils/activityTracker';
 
-interface CommissionData {
-  totalAmount: number;
-  invoiced: number;
-  notPaid: number;
-  registeredPatients: number;
-  montantPrescription: number;
-  montantRealisation: number;
+interface StatsData {
+  totalPatients: number;
+  totalExamens: number;
+  totalResultatsRecus: number;
+  patientsEnAttente: number;
+  examensTermines: number;
+  resultatsEnCours: number;
 }
 
 interface CommissionOverviewProps {
-  showAmount: boolean;
-  setShowAmount: (show: boolean) => void;
+  onNavigateToAnalysis?: () => void;
 }
 
-const CommissionOverview: React.FC<CommissionOverviewProps> = ({ showAmount, setShowAmount }) => {
-  const [showMontantPrescription, setShowMontantPrescription] = useState<boolean>(false);
-  const [showMontantRealisation, setShowMontantRealisation] = useState<boolean>(false);
-  const [commissionData, setCommissionData] = useState<CommissionData>({
-    totalAmount: 0,
-    invoiced: 0,
-    notPaid: 0,
-    registeredPatients: 0,
-    montantPrescription: 0,
-    montantRealisation: 0,
+const CommissionOverview: React.FC<CommissionOverviewProps> = ({ 
+  onNavigateToAnalysis 
+}) => {
+  const [statsData, setStatsData] = useState<StatsData>({
+    totalPatients: 0,
+    totalExamens: 0,
+    totalResultatsRecus: 0,
+    patientsEnAttente: 0,
+    examensTermines: 0,
+    resultatsEnCours: 0,
   });
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Function to get the date range description (copied from MobileStatsCards)
+  // Function to get the date range description
   const getDateRangeDescription = () => {
     const currentDate = new Date();
     const currentDay = currentDate.getDate();
@@ -43,11 +39,9 @@ const CommissionOverview: React.FC<CommissionOverviewProps> = ({ showAmount, set
     let cycleEndDate: Date;
 
     if (currentDay >= 21) {
-      // We are in the cycle that started on the 21st of this month
       cycleStartDate = new Date(currentYear, currentMonth, 21);
       cycleEndDate = new Date(currentYear, currentMonth + 1, 21);
     } else {
-      // We are in the cycle that started on the 21st of the previous month
       cycleStartDate = new Date(currentYear, currentMonth - 1, 21);
       cycleEndDate = new Date(currentYear, currentMonth, 21);
     }
@@ -71,9 +65,9 @@ const CommissionOverview: React.FC<CommissionOverviewProps> = ({ showAmount, set
 
   useEffect(() => {
     const handleIdle = () => {
-      console.log("User is idle. Consider logging out or showing a warning.");
     };
     startActivityTracking(handleIdle);
+
     return () => {
       stopActivityTracking();
     };
@@ -82,71 +76,80 @@ const CommissionOverview: React.FC<CommissionOverviewProps> = ({ showAmount, set
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const userDataString = localStorage.getItem('userData');
-        const userData = userDataString ? JSON.parse(userDataString) : null;
-        const doctorId = userData?.doctor_id || '65';
-
-        // Fetch main commission data
-        const response = await axiosInstance.get(`/doctor_com/solde/${doctorId}`);
-        const data = response.data;
-
-        // Fetch additional stats for prescription and realisation amounts
-        const statsResponse = await axiosInstance.get(`/doctor_com/actual_solde/${doctorId}`);
-        const statsData = statsResponse.data;
-
-        setCommissionData({
-          totalAmount: data.Solde.commission,
-          invoiced: data.Factured,
-          notPaid: data.Not_Factured,
-          registeredPatients: data.number_of_registered_patients,
-          montantPrescription: statsData.montant_prescription,
-          montantRealisation: statsData.montant_realisation,
-        });
+        // Simuler des données (remplacer par vos vraies données)
+        setTimeout(() => {
+          setStatsData({
+            totalPatients: 156,
+            totalExamens: 234,
+            totalResultatsRecus: 189,
+            patientsEnAttente: 12,
+            examensTermines: 201,
+            resultatsEnCours: 33,
+          });
+          setLoading(false);
+        }, 1000);
       } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
         setLoading(false);
       }
     };
+
     fetchData();
   }, []);
 
-  const formatAmount = (amount: number) => {
-    const formattedAmount = new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'XAF',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-    const parts = formattedAmount.split(' ');
-    const numericAmount = parts[0];
-    const currency = parts[1] ? parts[1] : 'XAF';
-    return { numericAmount, currency };
-  };
-
   if (loading) {
     return (
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Solde Principal</h3>
-          <div className="flex justify-center space-x-1 mb-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
-                style={{ animationDelay: `${i * 0.1}s` }}
-              />
-            ))}
+      <div className="space-y-4 mb-4">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Total Patients</h3>
+            <div className="flex justify-center space-x-1 mb-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-purple-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Total Examens</h3>
+            <div className="flex justify-center space-x-1 mb-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Résultats Reçus</h3>
+            <div className="flex justify-center space-x-1 mb-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                />
+              ))}
+            </div>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-yellow-50 to-orange-100 border border-yellow-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Détails des commissions</h3>
-          <div className="flex justify-center space-x-1 mb-4">
+
+        {/* Loading state for analysis navigation */}
+        <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-100 rounded-lg p-4 shadow-sm">
+          <div className="flex justify-center space-x-1">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="w-2 h-2 bg-yellow-500 rounded-full animate-bounce"
+                className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"
                 style={{ animationDelay: `${i * 0.1}s` }}
               />
             ))}
@@ -157,105 +160,126 @@ const CommissionOverview: React.FC<CommissionOverviewProps> = ({ showAmount, set
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 mb-4">
-      {/* Solde Principal Container */}
-      <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
-        <div className="absolute bottom-0 left-0 w-12 h-12 bg-blue-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <Wallet className="w-6 h-6 text-blue-600 mr-2" />
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800">Solde Principal</h3>
-              <p className="text-gray-500 text-xs">{getDateRangeDescription()}</p>
+    <div className="space-y-4 mb-4">
+      <div className="grid grid-cols-3 gap-4">
+        {/* Total Patients Container */}
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
+          <div className="absolute bottom-0 left-0 w-12 h-12 bg-blue-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Users className="w-6 h-6 text-blue-600 mr-2" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Total Patients</h3>
+                <p className="text-gray-500 text-xs">{getDateRangeDescription()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-center items-center mb-4">
+            <span className="text-3xl font-bold text-blue-700">
+              {statsData.totalPatients}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-gray-600">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+              <span className="text-sm">{statsData.patientsEnAttente} En attente</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm">Actif</span>
             </div>
           </div>
         </div>
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-baseline">
-            <span className="text-2xl font-bold text-gray-900">
-              {showAmount ? formatAmount(commissionData.totalAmount).numericAmount : '*****'}
+
+        {/* Total Examens Container */}
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-purple-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
+          <div className="absolute bottom-0 left-0 w-12 h-12 bg-purple-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <FileText className="w-6 h-6 text-purple-600 mr-2" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Total Examens</h3>
+                <p className="text-gray-500 text-xs">{getDateRangeDescription()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-center items-center mb-4">
+            <span className="text-3xl font-bold text-purple-700">
+              {statsData.totalExamens}
             </span>
-            <span className="text-sm text-gray-600 ml-1">
-              {showAmount ? formatAmount(commissionData.totalAmount).currency : ''}
+          </div>
+
+          <div className="flex items-center justify-between text-gray-600">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm">{statsData.examensTermines} Terminés</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-sm">En cours</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Résultats Reçus Container */}
+        {/* <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
+          <div className="absolute bottom-0 left-0 w-12 h-12 bg-emerald-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <CheckCircle className="w-6 h-6 text-emerald-600 mr-2" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Résultats Reçus</h3>
+                <p className="text-gray-500 text-xs">{getDateRangeDescription()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-center items-center mb-4">
+            <span className="text-3xl font-bold text-emerald-700">
+              {statsData.totalResultatsRecus}
             </span>
           </div>
-          <button
-            onClick={() => setShowAmount(!showAmount)}
-            className="w-8 h-8 flex items-center justify-center hover:bg-blue-200 rounded-full transition-colors"
-          >
-            {showAmount ? <EyeOff className="w-5 h-5 text-gray-800" /> : <Eye className="w-5 h-5 text-gray-800" />}
-          </button>
-        </div>
-        <div className="flex items-center justify-between text-gray-600">
-          <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            <span className="text-sm">{commissionData.invoiced} Invoiced</span>
+
+          <div className="flex items-center justify-between text-gray-600">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+              <span className="text-sm">{statsData.resultatsEnCours} En cours</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm">Reçus</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm">{commissionData.registeredPatients} patients</span>
-          </div>
-        </div>
+        </div> */}
       </div>
 
-      {/* Combined Prescription and Realisation Container */}
-      <div className="bg-gradient-to-br from-yellow-50 to-orange-100 border border-yellow-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-200 opacity-25 rounded-full -translate-y-8 translate-x-8"></div>
-        <div className="absolute bottom-0 left-0 w-12 h-12 bg-orange-200 opacity-20 rounded-full translate-y-6 -translate-x-6"></div>
-        <div className="absolute top-1/2 left-1/2 w-8 h-8 bg-yellow-300 opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Détails des commissions</h3>
-        <p className="text-gray-500 text-xs mb-4">{getDateRangeDescription()}</p>
-        <div className="flex">
-          {/* Montant Prescription */}
-          <div className="flex-1 pr-4">
-            <div className="flex items-center mb-2">
-              <FontAwesomeIcon icon={faPrescriptionBottle} className="text-blue-600 mr-2" size="lg" />
-              <div className="text-sm font-bold text-gray-700">Montant Prescription</div>
-            </div>
-            <div className="flex justify-between items-center mb-2">
-              <div className="flex flex-col">
-                <span className="text-lg font-bold text-gray-900">
-                  {showMontantPrescription ? formatAmount(commissionData.montantPrescription).numericAmount : '*****'}
-                </span>
-                <span className="text-sm text-gray-600">
-                  {showMontantPrescription ? formatAmount(commissionData.montantPrescription).currency : ''}
-                </span>
-              </div>
-              <button
-                onClick={() => setShowMontantPrescription(!showMontantPrescription)}
-                className="w-6 h-6 flex items-center justify-center hover:bg-yellow-200 rounded-full transition-colors flex-shrink-0"
-              >
-                {showMontantPrescription ? <EyeOff className="w-4 h-4 text-gray-800" /> : <Eye className="w-4 h-4 text-gray-800" />}
-              </button>
-            </div>
+      {/* Monthly Analysis Navigation Container */}
+      <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-100 rounded-lg p-4 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-12 h-12 bg-indigo-200 opacity-20 rounded-full -translate-y-6 translate-x-6"></div>
+        <div className="absolute bottom-0 left-0 w-8 h-8 bg-indigo-300 opacity-25 rounded-full translate-y-4 -translate-x-4"></div>
+        
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center">
+            <BarChart3 className="w-5 h-5 text-indigo-600 mr-3" />
+            <span className="text-base font-semibold text-gray-800">Analyser les statistiques mensuelles</span>
           </div>
-
-          {/* Vertical Divider */}
-          <div className="w-px bg-gray-300 mx-2"></div>
-
-          {/* Montant Réalisation */}
-          <div className="flex-1 pl-4">
-            <div className="flex items-center mb-2">
-              <FontAwesomeIcon icon={faTasks} className="text-orange-600 mr-2" size="lg" />
-              <div className="text-sm font-bold text-gray-700">Montant Réalisation</div>
-            </div>
-            <div className="flex justify-between items-center mb-2">
-              <div className="flex flex-col">
-                <span className="text-lg font-bold text-gray-900">
-                  {showMontantRealisation ? formatAmount(commissionData.montantRealisation).numericAmount : '*****'}
-                </span>
-                <span className="text-sm text-gray-600">
-                  {showMontantRealisation ? formatAmount(commissionData.montantRealisation).currency : ''}
-                </span>
-              </div>
-              <button
-                onClick={() => setShowMontantRealisation(!showMontantRealisation)}
-                className="w-6 h-6 flex items-center justify-center hover:bg-orange-200 rounded-full transition-colors flex-shrink-0"
-              >
-                {showMontantRealisation ? <EyeOff className="w-4 h-4 text-gray-800" /> : <Eye className="w-4 h-4 text-gray-800" />}
-              </button>
-            </div>
-          </div>
+          
+          <button
+            onClick={onNavigateToAnalysis}
+            className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+          >
+            Analyser
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </button>
         </div>
       </div>
     </div>

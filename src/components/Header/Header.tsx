@@ -10,7 +10,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ showLanguages, setShowLanguages }) => {
   const navigate = useNavigate();
-  const BASE_URL = 'http://65.21.73.170:1000/';
+  const BASE_URL = 'https://site.pdmdsante.com/';
 
   const handleLogout = async () => {
     try {
@@ -36,7 +36,7 @@ const Header: React.FC<HeaderProps> = ({ showLanguages, setShowLanguages }) => {
       // Rediriger vers la page de connexion
       navigate('/login');
     } catch (error) {
-      console.error('Échec de la déconnexion :', error);
+
       // Supprimer localStorage et rediriger même si l'appel API échoue
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');

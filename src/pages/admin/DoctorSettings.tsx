@@ -26,7 +26,7 @@ const DoctorSettings: React.FC = () => {
   useEffect(() => {
     const fetchActualities = async () => {
       try {
-        const response = await axios.get('http://65.21.73.170:1000/blog/');
+        const response = await axios.get('https://site.pdmdsante.com/blog/');
         const fetchedActualities = response.data.map((item: any) => ({
           id: item.id,
           title: item.titre,
@@ -38,7 +38,7 @@ const DoctorSettings: React.FC = () => {
         }));
         setActualities(fetchedActualities);
       } catch (error) {
-        console.error('Error fetching actualities:', error);
+    
       }
     };
 
@@ -61,14 +61,14 @@ const handleAddOrEdit = async (actuality: Partial<Actuality>) => {
   }
 
   try {
-    await axios.post('http://65.21.73.170:1000/blog/add', formData, {
+    await axios.post('https://site.pdmdsante.com/blog/add', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
 
     // Refresh actualities after adding/editing
-    const response = await axios.get('http://65.21.73.170:1000/blog/');
+    const response = await axios.get('https://site.pdmdsante.com/blog/');
     const fetchedActualities = response.data.map((item: any) => ({
       id: item.id,
       title: item.titre,
@@ -83,7 +83,7 @@ const handleAddOrEdit = async (actuality: Partial<Actuality>) => {
     setShowModal(false);
     setEditingActuality(null);
   } catch (error) {
-    console.error('Error adding/editing actuality:', error);
+
   }
 };
 
@@ -96,12 +96,12 @@ const handleAddOrEdit = async (actuality: Partial<Actuality>) => {
 
   const handleDelete = async (id: number) => {
     try {
-      await axios.delete(`http://65.21.73.170:1000/blog/del/${id}`);
+      await axios.delete(`https://site.pdmdsante.com/blog/del/${id}`);
       setActualities((prev) => prev.filter((a) => a.id !== id));
       setDeleteModal(false);
       setActualityToDelete(null);
       // Refresh actualities after deletion
-      const response = await axios.get('http://65.21.73.170:1000/blog/');
+      const response = await axios.get('https://site.pdmdsante.com/blog/');
       const fetchedActualities = response.data.map((item: any) => ({
         id: item.id,
         title: item.titre,
@@ -113,7 +113,7 @@ const handleAddOrEdit = async (actuality: Partial<Actuality>) => {
       }));
       setActualities(fetchedActualities);
     } catch (error) {
-      console.error('Error deleting actuality:', error);
+
     }
   };
 

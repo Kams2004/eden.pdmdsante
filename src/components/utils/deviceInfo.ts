@@ -12,6 +12,6 @@ export const sendDeviceInfo = () => {
 
   axiosInstance.post("/device-info", payload)
     .catch((err) => {
-      console.error("Failed to send device info:", err);
+      // Handle error
     });
 };

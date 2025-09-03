@@ -34,11 +34,11 @@ const AuthRedirect = () => {
       const selectedRole = localStorage.getItem("selectedRole"); // stored in lowercase
 
       try {
-        // Add a minimum loading time to prevent flash
+
         const startTime = Date.now();
         const minLoadingTime = 800; // 800ms minimum loading time
 
-        // Make request to /protected regardless of localStorage state
+      
         const response = await axiosInstance.get("/protected");
 
         // If token expired or missing, backend responds accordingly
@@ -62,15 +62,15 @@ const AuthRedirect = () => {
         const userData = JSON.parse(userDataString);
         const roles = userData.roles?.map((r: { name: string }) => r.name.toLowerCase()) || [];
 
-        // Ensure the user actually has the role stored in localStorage
+
         if (!roles.includes(selectedRole)) {
-          // Clear data and redirect to login if role mismatch
+
           clearAllAppData();
           setRedirectPath("/index");
           return;
         }
 
-        // Redirect according to the stored role
+
         switch (selectedRole) {
           case "admin":
             setRedirectPath("/admin");
@@ -89,7 +89,7 @@ const AuthRedirect = () => {
             setRedirectPath("/login");
         }
 
-        // Ensure minimum loading time has passed for better UX
+
         const elapsedTime = Date.now() - startTime;
         const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
         
@@ -98,8 +98,8 @@ const AuthRedirect = () => {
         }
 
       } catch (err: any) {
-        console.error("Error checking auth:", err);
-        // Clear all data on error
+   
+
         clearAllAppData();
         setRedirectPath("/index");
       } finally {

@@ -48,6 +48,11 @@ const predefinedRequests: PredefinedRequest[] = [
     id: 'commission-query',
     title: 'Requête de Commission',
     description: 'Requête concernant la structure ou les détails de la commission'
+  },
+  {
+    id: 'patient-status',
+    title: 'Requête d\'état des patients',
+    description: 'Demander un état ou un suivi spécifique concernant un ou plusieurs patients'
   }
 ];
 
@@ -55,31 +60,26 @@ const predefinedRequests: PredefinedRequest[] = [
 const formatDate = (dateString: string): string => {
   try {
     const date = new Date(dateString);
-
-    // Options pour le formatage français
     const options: Intl.DateTimeFormatOptions = {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'Africa/Douala' // Ajusté pour le Cameroun
+      timeZone: 'Africa/Douala'
     };
-
     return new Intl.DateTimeFormat('fr-FR', options).format(date);
   } catch (error) {
-    console.error('Erreur de formatage de date:', error);
-    return dateString; // Retourne la date originale en cas d'erreur
+    return dateString;
   }
 };
 
-// Fonction pour obtenir une date relative (optionnelle)
+// Fonction pour obtenir une date relative
 const getRelativeTime = (dateString: string): string => {
   try {
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
     if (diffInSeconds < 60) {
       return 'À l\'instant';
     } else if (diffInSeconds < 3600) {
@@ -123,6 +123,7 @@ const RequestsView: React.FC = () => {
           id: String(req.id),
           type: req.commission ? 'Inadéquation de Commission' :
                 req.revendication_examen ? 'Problème de Dossier Patient' :
+                req.patient_status ? 'Requête d\'état des patients' :
                 req.error ? 'Erreur Système' : 'Retard de Paiement',
           description: req.message,
           urgency: 'low',
@@ -134,7 +135,6 @@ const RequestsView: React.FC = () => {
         setSentRequests(requests);
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des requêtes de l\'utilisateur :', error);
     } finally {
       setLoading(false);
     }
@@ -165,6 +165,7 @@ const RequestsView: React.FC = () => {
       last_name: last_name,
       message: customMessage,
       revendication_examen: selectedRequest === 'commission-query',
+      patient_status: selectedRequest === 'patient-status',
       suggestion: selectedRequest === 'commission-delay'
     };
     try {
@@ -175,7 +176,6 @@ const RequestsView: React.FC = () => {
       setCustomMessage('');
       setUrgency('low');
     } catch (error) {
-      console.error('Erreur lors de l\'envoi de la requête :', error);
       showErrorToast('Échec de l\'envoi de la requête');
     } finally {
       setLoading(false);
@@ -295,7 +295,7 @@ const RequestsView: React.FC = () => {
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       {/* En-tête */}
       <div className="bg-white border-b border-slate-200 px-6 py-6">
-        <h1 className="text-2xl font-semibold text-black">Soumettre une Requête de Commission</h1>
+        <h1 className="text-2xl font-semibold text-black">Soumettre une Requête</h1>
         <div className="w-16 h-1 bg-blue-400 mt-3 rounded-full"></div>
       </div>
       {/* Formulaire de Nouvelle Requête */}
@@ -354,7 +354,7 @@ const RequestsView: React.FC = () => {
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCustomMessage(e.target.value)}
               rows={5}
               className="w-full px-4 py-4 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white hover:border-slate-400 transition-colors"
-              placeholder="Veuillez fournir toute information supplémentaire concernant votre requête de commission..."
+              placeholder="Veuillez fournir toute information supplémentaire concernant votre requête..."
             ></textarea>
           </div>
           <div className="flex justify-end">
@@ -417,7 +417,6 @@ const RequestsView: React.FC = () => {
             <div key={request.id} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-5 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200 opacity-20 rounded-full -translate-y-10 translate-x-10"></div>
               <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-300 opacity-15 rounded-full translate-y-8 -translate-x-8"></div>
-
               <div className="flex items-start justify-between mb-4 relative z-10">
                 <div className="flex items-start space-x-3">
                   <MessageSquare className="w-6 h-6 text-blue-500 mt-0.5" />
@@ -446,8 +445,6 @@ const RequestsView: React.FC = () => {
                   </p>
                 </div>
               )}
-
-              {/* Section des dates compacte pour desktop */}
               <div className="flex justify-between items-center pt-4 border-t border-blue-200 relative z-10">
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1 mb-1">
@@ -457,7 +454,6 @@ const RequestsView: React.FC = () => {
                   <span className="text-xs font-medium text-slate-600">{formatDate(request.createdAt)}</span>
                   <span className="text-xs text-slate-500">{getRelativeTime(request.createdAt)}</span>
                 </div>
-
                 <div className="flex flex-col text-right">
                   <div className="flex items-center gap-1 mb-1 justify-end">
                     <span className="text-xs font-semibold text-blue-800">Mise à jour</span>

@@ -16,7 +16,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   try {
     userData = JSON.parse(userDataString);
   } catch (error) {
-    console.error('Error parsing user data:', error);
+
     return <Navigate to="/login" replace />;
   }
 

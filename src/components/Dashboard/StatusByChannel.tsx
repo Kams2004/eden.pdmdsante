@@ -18,7 +18,7 @@ const StatusByChannel: React.FC = () => {
         setLoading(true);
         const userData = localStorage.getItem('userData');
         if (!userData) {
-          console.error('No user data found in localStorage');
+
           return;
         }
         const { doctor_id } = JSON.parse(userData);
@@ -41,7 +41,7 @@ const StatusByChannel: React.FC = () => {
         const formattedChannelData: ChannelData[] = Object.values(channelCounts).sort((a, b) => b.value - a.value);
         setChannelData(formattedChannelData);
       } catch (error) {
-        console.error('Error fetching status by channel data:', error);
+ 
       } finally {
         setLoading(false);
       }

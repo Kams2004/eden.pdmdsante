@@ -40,7 +40,7 @@ const Users: React.FC = () => {
       const response = await axiosInstance.get('/users/all');
       setUsers(response.data);
     } catch (error) {
-      console.error('Échec de la récupération des utilisateurs :', error);
+ 
       showNotification('Échec de la récupération des utilisateurs', 'error');
     } finally {
       setLoading(false);
@@ -69,7 +69,7 @@ const Users: React.FC = () => {
       setUsers(users.filter(user => user.id !== userToDelete));
       showNotification('Utilisateur supprimé avec succès', 'success');
     } catch (error) {
-      console.error('Échec de la suppression de l\'utilisateur :', error);
+   
       showNotification('Échec de la suppression de l\'utilisateur', 'error');
     } finally {
       setShowDeleteModal(false);

@@ -36,8 +36,8 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
     { name: 'Tableau de bord', icon: LayoutDashboard, key: 'dashboard' },
     { name: 'Patients', icon: User, key: 'patients' },
     { name: 'Requêtes', icon: FileText, key: 'request' },
-    // { name: 'Commissions', icon: DollarSign, key: 'commissions' },
-    // { name: 'Analyse des commissions', icon: BarChart2, key: 'commissionAnalysis' },
+    { name: 'Commissions', icon: DollarSign, key: 'commissions' },
+    { name: 'Analyse des commissions', icon: BarChart2, key: 'commissionAnalysis' },
     { name: 'Paramètres', icon: Settings, key: 'settings' }
   ];
 

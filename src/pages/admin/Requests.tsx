@@ -44,7 +44,7 @@ const Requests: React.FC = () => {
         }));
         setRequests(formattedRequests);
       } catch (error) {
-        console.error('Erreur lors de la récupération des demandes :', error);
+   
       }
     };
     fetchRequests();
@@ -84,7 +84,7 @@ const Requests: React.FC = () => {
         ));
       }
     } catch (error) {
-      console.error('Erreur lors de l\'approbation de la demande :', error);
+
     }
   };
 
@@ -93,7 +93,7 @@ const Requests: React.FC = () => {
       await axiosInstance.delete(`/requete/del/${requestId}`);
       setRequests(requests.filter(request => request.id !== requestId));
     } catch (error) {
-      console.error('Erreur lors du rejet de la demande :', error);
+
     }
   };
 
@@ -110,7 +110,7 @@ const Requests: React.FC = () => {
         setShowDeleteModal(false);
         setRequestToDelete(null);
       } catch (error) {
-        console.error('Erreur lors de la suppression de la demande :', error);
+       
         setShowDeleteModal(false);
         setRequestToDelete(null);
       }

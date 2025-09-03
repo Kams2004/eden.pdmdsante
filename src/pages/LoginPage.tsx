@@ -124,7 +124,7 @@ const checkDoctorProfileComplete = (doctorData: any): boolean => {
           }
           navigate('/doctor');
         } catch (doctorError) {
-          console.error('Error fetching doctor information:', doctorError);
+   
           setError('Failed to load doctor information. Please try again.');
         }
       } else {

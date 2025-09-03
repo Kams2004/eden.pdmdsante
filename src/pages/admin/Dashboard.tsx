@@ -115,7 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
         setRecentRequests(filteredRequests);
         setError(null);
       } catch (err: any) {
-        console.error('Échec de la récupération des données du tableau de bord :', err);
+   
         let errorMessage = 'Échec du chargement des données du tableau de bord.';
         if (err.code === 'ERR_NETWORK') {
           errorMessage = 'Erreur de connexion réseau. Veuillez vérifier votre connexion internet.';

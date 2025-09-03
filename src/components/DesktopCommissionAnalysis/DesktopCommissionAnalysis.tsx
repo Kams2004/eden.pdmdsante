@@ -81,7 +81,7 @@ const DesktopCommissionAnalysis: React.FC = () => {
   };
   useEffect(() => {
     const handleIdle = () => {
-      console.log("User is idle. Consider logging out or showing a warning.");
+
       // You can add logic here to log out or show a warning
     };
 
@@ -103,7 +103,7 @@ const DesktopCommissionAnalysis: React.FC = () => {
       );
       setMonthlyData(response.data);
     } catch (error) {
-      console.error('Erreur lors de la récupération des données mensuelles :', error);
+
     } finally {
       setLoading(false);
     }
@@ -121,7 +121,7 @@ const DesktopCommissionAnalysis: React.FC = () => {
       );
       setYearlyData(response.data);
     } catch (error) {
-      console.error('Erreur lors de la récupération des données annuelles :', error);
+
     } finally {
       setLoading(false);
     }

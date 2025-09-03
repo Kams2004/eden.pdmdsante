@@ -72,7 +72,7 @@ const CommissionView: React.FC<CommissionViewProps> = ({
     try {
       const userData = localStorage.getItem("userData");
       if (!userData) {
-        console.error("Aucune donnée utilisateur trouvée dans localStorage");
+
         return;
       }
 
@@ -110,17 +110,14 @@ const CommissionView: React.FC<CommissionViewProps> = ({
       setFilteredPrescriptionPatients(formattedPrescriptionPatients);
       setFilteredRealisationPatients(formattedRealisationPatients);
     } catch (error) {
-      console.error(
-        "Erreur lors de la récupération des données des patients :",
-        error
-      );
+ 
     } finally {
       setLoading(false);
     }
   };
   useEffect(() => {
     const handleIdle = () => {
-      console.log("User is idle. Consider logging out or showing a warning.");
+     
       // You can add logic here to log out or show a warning
     };
 
@@ -195,7 +192,7 @@ const CommissionView: React.FC<CommissionViewProps> = ({
   };
 
   const handleFilter = () => {
-    console.log("Filtre cliqué avec les dates :", startDate, endDate);
+
   };
 
   const handleReset = () => {

@@ -20,7 +20,7 @@ const MonthlyTransactions: React.FC = () => {
       try {
         const userData = localStorage.getItem('userData');
         if (!userData) {
-          console.error('No user data found in localStorage');
+
           return;
         }
 
@@ -34,7 +34,7 @@ const MonthlyTransactions: React.FC = () => {
           Nombre_Commissions: data.Nombre_Commissions,
         });
       } catch (error) {
-        console.error('Error fetching doctor data:', error);
+
       }
     };
 

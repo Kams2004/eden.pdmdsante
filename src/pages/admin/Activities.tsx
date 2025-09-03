@@ -25,7 +25,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 
 // API Configuration
-const BASE_URL = 'http://65.21.73.170:1000/';
+const BASE_URL = 'https://site.pdmdsante.com/';
 
 // Create axios-like function using fetch
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
@@ -126,7 +126,7 @@ const Activities: React.FC = () => {
       const response = await apiCall(`users/get/${userId}`);
       return response.user || null;
     } catch (err) {
-      console.error(`Error fetching user ${userId}:`, err);
+
       return null;
     }
   };
@@ -147,7 +147,7 @@ const Activities: React.FC = () => {
       } else if (response.activities && Array.isArray(response.activities)) {
         activitiesData = response.activities;
       } else {
-        console.warn('Unexpected API response structure:', response);
+  
         activitiesData = [];
       }
       
@@ -165,8 +165,8 @@ const Activities: React.FC = () => {
       setActivities(activitiesWithUserInfo);
       setFilteredActivities(activitiesWithUserInfo);
     } catch (err) {
-      console.error('Error fetching activities:', err);
-      setError(err instanceof Error ? err.message : 'Échec du chargement des activités');
+
+
       setTimeout(() => setError(null), 5000);
     } finally {
       setIsLoading(false);
@@ -191,8 +191,8 @@ const Activities: React.FC = () => {
       setSuccessMessage('Toutes les activités ont été supprimées avec succès');
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
-      console.error('Error deleting activities:', err);
-      setError(err instanceof Error ? err.message : 'Échec de la suppression des activités');
+     
+     
       setTimeout(() => setError(null), 5000);
     } finally {
       setIsDeleting(false);

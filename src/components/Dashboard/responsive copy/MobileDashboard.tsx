@@ -12,7 +12,6 @@ import MobileSidebar from "./MobileSidebar";
 import PersonalInfoForm from "./pages/PersonalInfoForm";
 import MobileCommissionAnalysis from "./pages/MobileCommissionAnalysis";
 import { sendDeviceInfo } from "../../utils/deviceInfo";
-import MobileActualities from "./MobileActualitiesProps";
 
 type ViewType =
   | "dashboard"
@@ -30,46 +29,7 @@ const MobileDoctorDashboard = () => {
   const [isProfileComplete, setIsProfileComplete] = useState<boolean>(false);
   const navigate = useNavigate();
 
-  // Sample actualities data
-  const actualities = [
-    {
-      id: 1,
-      title: "Nouveau Système de Gestion des Patients",
-      date: "2024-03-15",
-      description: "Mise à jour du système pour une meilleure prise en charge des patients avec de nouvelles fonctionnalités.",
-      image: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=500&auto=format"
-    },
-    {
-      id: 2,
-      title: "Formation sur les Nouvelles Procédures",
-      date: "2024-03-12",
-      description: "Session de formation obligatoire sur les nouvelles procédures médicales et protocoles de sécurité.",
-      image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=500&auto=format"
-    },
-    {
-      id: 3,
-      title: "Mise à Jour des Équipements Médicaux",
-      date: "2024-03-10",
-      description: "Installation de nouveaux équipements de diagnostic pour améliorer la qualité des soins.",
-      image: "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=500&auto=format"
-    },
-    {
-      id: 4,
-      title: "Nouvelle Politique de Télémédecine",
-      date: "2024-03-08",
-      description: "Introduction de services de télémédecine pour étendre l'accès aux soins de santé.",
-      image: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=500&auto=format"
-    },
-    {
-      id: 5,
-      title: "Amélioration du Système de Rapports",
-      date: "2024-03-05",
-      description: "Nouveaux outils de rapport pour un suivi plus efficace des patients et des résultats.",
-      image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=500&auto=format"
-    }
-  ];
-
-  // Function to check if doctor profile is complete
+  // Fonction pour vérifier si le profil est complet
   const checkDoctorProfileComplete = (doctorData: any): boolean => {
     return doctorData.doctor_is_confirmed === true;
   };
@@ -80,36 +40,32 @@ const MobileDoctorDashboard = () => {
       navigate("/login");
       return;
     }
-
     try {
       const userData = JSON.parse(userDataString);
       const userRoles =
         userData.roles?.map((role: { name: string }) =>
           role.name.toLowerCase()
         ) || [];
-
       if (!userRoles.includes("doctor")) {
         navigate("/login");
         return;
       }
-
       const doctorDataString = localStorage.getItem("doctorData");
       if (doctorDataString) {
         try {
           const doctorData = JSON.parse(doctorDataString);
           const isComplete = checkDoctorProfileComplete(doctorData);
           setIsProfileComplete(isComplete);
-          
-          // If profile is not complete, redirect to settings
+          // Si le profil n'est pas complet, rediriger vers les paramètres
           if (!isComplete) {
             setCurrentView("settings");
           }
         } catch (error) {
-          console.error('Error parsing doctor data:', error);
+
         }
       }
     } catch (error) {
-      console.error('Error parsing user data:', error);
+     
       navigate("/login");
     }
   }, [navigate]);
@@ -122,13 +78,13 @@ const MobileDoctorDashboard = () => {
     if (view === "toggleSidebar") {
       setSidebarOpen(!sidebarOpen);
     } else {
-      // Block access to other views if profile is not complete
+      // Bloquer l'accès aux autres vues si le profil n'est pas complet
       if (!isProfileComplete && view !== "settings") {
         return;
       }
       setCurrentView(view);
-      
-      // Reset patient selection if leaving patients view
+
+      // Réinitialiser la sélection des patients si on quitte la vue patients
       if (view !== "patients") {
         setSelectedPatients([]);
       }
@@ -136,7 +92,7 @@ const MobileDoctorDashboard = () => {
   };
 
   const handleDetailsClick = (patients: string[]) => {
-    // Block access if profile is not complete
+    // Bloquer l'accès si le profil n'est pas complet
     if (!isProfileComplete) {
       return;
     }
@@ -145,7 +101,7 @@ const MobileDoctorDashboard = () => {
   };
 
   const handleViewAnalysis = () => {
-    // Block access if profile is not complete
+    // Bloquer l'accès si le profil n'est pas complet
     if (!isProfileComplete) {
       return;
     }
@@ -177,36 +133,22 @@ const MobileDoctorDashboard = () => {
         <div className="px-4 py-6 space-y-6 mt-2">
           {currentView === "dashboard" && isProfileComplete && (
             <>
-              {/* Enhanced Stats Cards with Commission Overview */}
               <MobileStatsCards onViewAnalysis={handleViewAnalysis} />
-              
-              {/* Mobile Actualities */}
-              <MobileActualities actualities={actualities} />
-              
-              {/* Today's Stats */}
-              {/* <MobileTodayStats /> */}
-              <MobilePatientsList onDetailsClick={function (selectedPatients: string[]): void {
-                throw new Error("Function not implemented.");
-              } } />
+              <MobileTodayStats />
             </>
           )}
-
           {currentView === "patients" && isProfileComplete && (
             <MobilePatientsContent selectedPatients={selectedPatients} />
           )}
-
           {currentView === "request" && isProfileComplete && (
             <MobileRequestsContent />
           )}
-
           {currentView === "commissions" && isProfileComplete && (
             <MobileCommission />
           )}
-
           {currentView === "commissionAnalysis" && isProfileComplete && (
             <MobileCommissionAnalysis />
           )}
-
           {currentView === "settings" && (
             <PersonalInfoForm onProfileUpdate={handleProfileUpdate} />
           )}

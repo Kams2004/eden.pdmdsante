@@ -14,8 +14,9 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Tableau de bord', key: 'dashboard' },
   { icon: User, label: 'Patients', key: 'patients' },
   { icon: FileText, label: 'Requêtes', key: 'request' },
-  { icon: DollarSign, label: 'Commissions', key: 'commissions' },
-  { icon: BarChart2, label: 'Analyse commissions', key: 'commissionAnalysis' },
+  { icon: BarChart2, label: 'Résultats', key: 'results' },
+  // { icon: DollarSign, label: 'Commissions', key: 'commissions' },
+  // { icon: BarChart2, label: 'Analyse commissions', key: 'commissionAnalysis' },
   { icon: Settings, label: 'Paramètres', key: 'settings' }
 ];
 

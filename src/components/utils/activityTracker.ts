@@ -21,13 +21,13 @@ const setupActivityListeners = () => {
 const setupHeartbeat = () => {
   // Send an immediate heartbeat
   axiosInstance.post("/heartbeat").catch((err) => {
-    console.error("Heartbeat failed:", err);
+
   });
 
   // Set up recurring heartbeat
   setInterval(() => {
     axiosInstance.post("/heartbeat").catch((err) => {
-      console.error("Heartbeat failed:", err);
+
     });
   }, 30000);
 };

@@ -59,7 +59,7 @@ const Roles: React.FC = () => {
         }));
         setRoles(rolesWithCounts);
       } catch (err) {
-        console.error('Échec du chargement des données :', err);
+
       } finally {
         setLoading(false);
       }

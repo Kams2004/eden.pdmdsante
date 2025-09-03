@@ -118,7 +118,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
       const userData = JSON.parse(localStorage.getItem('userData') || '{}');
       return userData.doctor_id || userData.id || userData.user_id;
     } catch (error) {
-      console.error('Erreur lors de la récupération de l\'ID:', error);
+
       return null;
     }
   };
@@ -161,7 +161,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
           doctorPhone2: doctorData.DoctorPhone2 || "",
         });
       } catch (error) {
-        console.error('Erreur lors de la récupération des informations:', error);
+    
         setError('Échec du chargement des informations');
       } finally {
         setIsLoading(false);
@@ -220,7 +220,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
       const response = await axiosInstance.put(`/doctors/update/${doctorId}`, updateData);
       return response.data;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour des informations:', error);
+   
       throw new Error('Échec de la mise à jour des informations');
     }
   };
@@ -258,7 +258,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onProfileUpdate }) => {
       setModalType("error");
       setModalMessage(error.message || "Une erreur est survenue lors de la mise à jour des informations.");
       setShowResultModal(true);
-      console.error('Erreur:', error);
+
     } finally {
       setIsSaving(false);
     }

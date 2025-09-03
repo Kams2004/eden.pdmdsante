@@ -9,11 +9,8 @@ import {
   ChevronDown,
   Search,
 } from "lucide-react";
-import axiosInstance from "../../../../api/axioConfig";
-import {
-  startActivityTracking,
-  stopActivityTracking,
-} from "../../../utils/activityTracker";
+import axiosInstance from "../../api/axioConfig";
+import { startActivityTracking, stopActivityTracking } from "../utils/activityTracker";
 
 interface Patient {
   id: string;
@@ -24,11 +21,11 @@ interface Patient {
   selected: boolean;
 }
 
-interface MobilePatientsContentProps {
+interface PatientsViewProps {
   selectedPatients?: string[];
 }
 
-const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
+const PatientsView: React.FC<PatientsViewProps> = ({
   selectedPatients = [],
 }) => {
   const [startDate, setStartDate] = useState("");
@@ -39,8 +36,7 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Nouveaux états pour le filtrage amélioré
+  // États de filtrage améliorés
   const [invoiceStatus, setInvoiceStatus] = useState<
     "invoiced" | "Notinvoiced"
   >("invoiced");
@@ -50,9 +46,10 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
   >("prescription");
   const [showFilters, setShowFilters] = useState(false);
   const [monthlyData, setMonthlyData] = useState<any>(null);
-
-  // Nouvel état pour la recherche par nom
   const [searchTerm, setSearchTerm] = useState("");
+
+  const patientsPerPage = 6;
+  const currentYear = new Date().getFullYear();
   useEffect(() => {
     const handleIdle = () => {
 
@@ -65,57 +62,36 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
       stopActivityTracking();
     };
   }, []);
-  const patientsPerPage = 6;
-  const currentYear = new Date().getFullYear();
-  // Mois disponibles (vous pouvez rendre cela dynamique en fonction de la réponse de l'API)
-  const availableMonths = [
-    "JANVIER",
-    "FEVRIER",
-    "MARS",
-    "AVRIL",
-    "MAI",
-    "JUIN",
-    "JUILLET",
-    "AOUT",
-    "SEPTEMBRE",
-    "OCTOBRE",
-    "NOVEMBRE",
-    "DECEMBRE",
-  ];
-
   const fetchPatientsData = async () => {
     try {
       setLoading(true);
       const userData = localStorage.getItem("userData");
       if (!userData) {
-  
+      
         return;
       }
       const { doctor_id } = JSON.parse(userData);
-
       // Récupérer les données en fonction du statut de la facture
       const response = await axiosInstance.get(
         `/doctor_com/invoiced_by_year/${doctor_id}/${currentYear}/${invoiceStatus}`
       );
-
       setMonthlyData(response.data);
-
       // Si aucun mois n'est sélectionné, sélectionnez le premier mois disponible avec des données
       if (!selectedMonth) {
         const monthsWithData = Object.keys(response.data).filter(
           (month) =>
-            (month !== "Total" &&
-              response.data[month]?.elements_prescription?.data_patients
-                ?.length > 0) ||
-            response.data[month]?.elements_realisation?.data_patients?.length >
-              0
+            month !== "Total" &&
+            (response.data[month]?.elements_prescription?.data_patients
+              ?.length > 0 ||
+              response.data[month]?.elements_realisation?.data_patients
+                ?.length > 0)
         );
         if (monthsWithData.length > 0) {
           setSelectedMonth(monthsWithData[0]);
         }
       }
     } catch (error) {
-   
+
     } finally {
       setLoading(false);
     }
@@ -142,7 +118,6 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
         const patientName = Object.keys(patientData)[0];
         const [examination, patientCommission, transferDate] =
           patientData[patientName];
-
         return {
           id: `P${index + 1}`,
           name: patientName,
@@ -166,17 +141,10 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
   }, [monthlyData, selectedMonth, selectedType]);
 
   useEffect(() => {
-    const filterPatients = () => {
+    const filterPatientsByDateAndSearch = () => {
       let filtered = [...patients];
 
-      // Filtrage par nom
-      if (searchTerm) {
-        filtered = filtered.filter((patient) =>
-          patient.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      }
-
-      // Filtrage par date
+      // Filter by date range
       if (startDate) {
         const start = new Date(startDate);
         filtered = filtered.filter(
@@ -190,10 +158,17 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
         );
       }
 
+      // Filter by search term (patient name)
+      if (searchTerm.trim() !== "") {
+        filtered = filtered.filter((patient) =>
+          patient.name.toLowerCase().includes(searchTerm.toLowerCase().trim())
+        );
+      }
+
       setFilteredPatients(filtered);
       setCurrentPage(1);
     };
-    filterPatients();
+    filterPatientsByDateAndSearch();
   }, [startDate, endDate, patients, searchTerm]);
 
   const handleFilter = () => {
@@ -211,11 +186,11 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
   };
 
   const handlePrint = () => {
-    const selectedPatients = filteredPatients.filter(
+    const selectedPatientsData = filteredPatients.filter(
       (patient) => patient.selected
     );
-    if (selectedPatients.length === 0) {
-      alert("Veuillez sélectionner au moins un patient pour imprimer");
+    if (selectedPatientsData.length === 0) {
+      alert("Veuillez sélectionner au moins un patient à imprimer");
       return;
     }
     const printWindow = window.open("", "_blank");
@@ -243,9 +218,9 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
             <p>Rapport des Patients - ${new Date().toLocaleDateString()}</p>
           </div>
           <div class="filter-info">
-            <p><strong>Statut :</strong> ${
-              invoiceStatus === "invoiced" ? "Facturé" : "Non facturé"
-            } | <strong>Mois :</strong> ${selectedMonth} | <strong>Type :</strong> ${
+            <p><strong>Statut:</strong> ${
+              invoiceStatus === "invoiced" ? "Facturé" : "Non Facturé"
+            } | <strong>Mois:</strong> ${selectedMonth} | <strong>Type:</strong> ${
       selectedType === "prescription" ? "Prescription" : "Réalisation"
     }</p>
           </div>
@@ -260,7 +235,7 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
               </tr>
             </thead>
             <tbody>
-              ${selectedPatients
+              ${selectedPatientsData
                 .map(
                   (patient) => `
                 <tr>
@@ -276,7 +251,7 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
             </tbody>
           </table>
           <div class="total">
-            Commission Totale : ${selectedPatients
+            Commission Totale: ${selectedPatientsData
               .reduce((sum, patient) => {
                 const amount = parseFloat(
                   patient.commission.replace(/[^\d.-]/g, "")
@@ -330,87 +305,73 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
 
   const getTotalCommission = () => {
     if (!monthlyData || !selectedMonth || !monthlyData[selectedMonth]) return 0;
-
     const monthData = monthlyData[selectedMonth];
     const typeData =
       selectedType === "prescription"
         ? monthData.elements_prescription
         : monthData.elements_realisation;
-
     return typeData?.commission || 0;
   };
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">
-          <h1 className="text-xl font-semibold text-slate-800">
+      <div className="w-full bg-white rounded-lg shadow-md p-6">
+        <div className="text-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-800">
             Patients Enregistrés
-          </h1>
-
-          <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
-        </div>
-        <div className="px-4 py-8 text-center">
-          <div className="flex space-x-1 justify-center">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
-                style={{ animationDelay: `${i * 0.1}s` }}
-              />
-            ))}
-          </div>
-          <p className="mt-4 text-slate-600">
-            Chargement des données des patients...
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">
+            À votre service pour votre santé
           </p>
+          <div className="w-24 h-1 bg-blue-500 mx-auto mt-2 rounded-full"></div>
+        </div>
+        <div className="text-center py-8">
+          <div className="flex items-center justify-center mb-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-2"></div>
+            <span className="text-gray-600">
+              Chargement des données des patients...
+            </span>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">
-        <h1 className="text-xl font-semibold text-slate-800">
+    <div className="w-full bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
+        <h2 className="text-2xl font-bold text-slate-800">
           Patients Enregistrés
-        </h1>
-
-        <div className="w-12 h-1 bg-blue-400 mt-2 rounded-full"></div>
+        </h2>
+        <div className="w-24 h-1 bg-blue-500 mt-2 rounded-full"></div>
       </div>
 
-      {/* Barre de Recherche - Section Prominente */}
-      <div className="px-4 sm:px-6 py-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
-        <div className="relative">
+      {/* Search Bar - Prominent Position */}
+      <div className="px-6 py-4 bg-white border-b border-slate-200">
+        <div className="relative max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-blue-400" />
+            <Search className="h-5 w-5 text-gray-400" />
           </div>
           <input
             type="text"
-            placeholder="Rechercher un patient par nom..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 text-base border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm transition-all duration-200 hover:border-blue-300"
+            className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-400 transition-colors"
+            placeholder="Rechercher un patient par nom..."
           />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm("")}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </button>
-          )}
         </div>
         {searchTerm && (
-          <p className="mt-2 text-sm text-blue-600 font-medium">
-            {filteredPatients.length} patient(s) trouvé(s) pour "{searchTerm}"
+          <p className="text-sm text-blue-600 mt-2">
+            Filtrage actif pour: "{searchTerm}" - {filteredPatients.length}{" "}
+            résultat(s) trouvé(s)
           </p>
         )}
       </div>
 
       {/* Section de Filtre Améliorée */}
-      <div className="px-4 sm:px-6 py-4 bg-slate-50/50 border-b border-slate-200">
+      <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-200">
         <div className="space-y-4">
-          {/* Filtres Principaux */}
+          {/* Contrôles Principaux de Filtre */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-slate-700">
               Options de Filtre
@@ -426,8 +387,8 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
               />
             </button>
           </div>
-          {/* Sélection du Statut de Facture */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Sélection du Statut de la Facture */}
+          <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setInvoiceStatus("invoiced")}
               className={`p-3 rounded-lg border transition-colors ${
@@ -479,7 +440,7 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
                 </select>
               </div>
               {/* Sélection du Type */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => setSelectedType("prescription")}
                   className={`p-3 rounded-lg border transition-colors ${
@@ -530,8 +491,8 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
                 </button>
               </div>
               {showDatePicker && (
-                <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4 p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-                  <div className="relative">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Date de Début
                     </label>
@@ -539,10 +500,10 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white hover:border-slate-400 transition-colors"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white"
                     />
                   </div>
-                  <div className="relative">
+                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Date de Fin
                     </label>
@@ -550,7 +511,7 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white hover:border-slate-400 transition-colors"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white"
                     />
                   </div>
                 </div>
@@ -558,24 +519,27 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
             </>
           )}
           {/* Boutons d'Action */}
-          <div className="flex flex-row space-x-2 w-full">
+          <div className="flex gap-2">
             <button
               onClick={handleFilter}
               className="flex-1 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center justify-center transition-colors shadow-sm"
             >
-              <Filter className="w-4 h-4" />
+              <Filter className="w-4 h-4 mr-2" />
+              Filtrer
             </button>
             <button
               onClick={handleReset}
               className="flex-1 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center justify-center transition-colors shadow-sm"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Réinitialiser
             </button>
             <button
               onClick={handlePrint}
               className="flex-1 p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center justify-center transition-colors shadow-sm"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimer
             </button>
           </div>
         </div>
@@ -587,73 +551,96 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
             <span className="ml-2 text-blue-600 font-medium">
               | {selectedMonth} -{" "}
               {selectedType === "prescription" ? "Prescription" : "Réalisation"}{" "}
-              ({invoiceStatus === "invoiced" ? "Facturé" : "Non facturé"})
+              ({invoiceStatus === "invoiced" ? "Facturé" : "Non Facturé"})
             </span>
           )}
         </p>
       </div>
-      {/* Liste des Patients */}
-      <div className="px-4 py-2">
+      {/* Tableau des Patients */}
+      <div className="overflow-x-auto">
         {filteredPatients.length > 0 ? (
           <>
-            <div className="flex items-center mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <input
-                type="checkbox"
-                checked={selectAll}
-                onChange={handleSelectAll}
-                className="w-4 h-4 text-blue-500 border-slate-300 rounded mr-3 focus:ring-2 focus:ring-blue-400"
-              />
-              <span className="text-sm font-medium text-slate-700">
-                Tout Sélectionner (
-                {filteredPatients.filter((p) => p.selected).length}{" "}
-                sélectionné(s))
-              </span>
+            <div className="px-6 py-4 border-b border-slate-200">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={selectAll}
+                  onChange={handleSelectAll}
+                  className="w-4 h-4 text-blue-500 border-slate-300 rounded mr-3 focus:ring-2 focus:ring-blue-400"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  Tout Sélectionner (
+                  {filteredPatients.filter((p) => p.selected).length}{" "}
+                  sélectionné(s))
+                </span>
+              </div>
             </div>
-            <div className="space-y-3">
-              {currentPatients.map((patient, index) => (
-                <div
-                  key={patient.id || index}
-                  className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-100 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200 opacity-20 rounded-full -translate-y-8 translate-x-8"></div>
-                  <div className="absolute bottom-0 left-0 w-12 h-12 bg-blue-300 opacity-15 rounded-full translate-y-6 -translate-x-6"></div>
-
-                  <div className="flex items-start justify-between mb-3 relative z-10">
-                    <div className="flex items-center space-x-3">
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="border-b border-gray-200 bg-slate-50">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">
+                    Sélectionner
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">
+                    ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">
+                    Patients
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">
+                    Examens
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">
+                    Commissions
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">
+                    Date de Transfert
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentPatients.map((patient, index) => (
+                  <tr
+                    key={patient.id}
+                    className={`border-b border-gray-100 hover:bg-gray-50 ${
+                      index % 2 === 0 ? "bg-[#F7F8FA]" : "bg-white"
+                    }`}
+                  >
+                    <td className="px-6 py-3">
                       <input
                         type="checkbox"
                         checked={patient.selected}
                         onChange={() => handlePatientSelect(patient.id)}
                         className="w-4 h-4 text-blue-500 border-slate-300 rounded focus:ring-2 focus:ring-blue-400"
                       />
-                      <span className="text-xs font-medium flex items-center text-black bg-white px-2 py-1 rounded-full">
-                        <Calendar className="w-3 h-3 mr-1 text-black" />
-                        {patient.transferDate}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mb-3 relative z-10">
-                    <h1 className="text-base font-bold mb-2 text-blue-800">
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-600">
+                      {patient.id}
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-800 font-medium">
                       {patient.name}
-                    </h1>
-                    <p className="text-xs font-medium text-gray-600 bg-white p-2 rounded-lg border border-blue-200">
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-600">
                       {patient.examination}
-                    </p>
-                  </div>
-                  <div className="flex justify-end items-center pt-3 border-t border-blue-200 relative z-10">
-                    <span
-                      className={`text-sm font-bold px-3 py-1 rounded-full ${
-                        patient.commission.includes("-")
-                          ? "text-white bg-red-500"
-                          : "text-white bg-green-500"
-                      }`}
-                    >
-                      {patient.commission}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                    </td>
+                    <td className="px-6 py-3 text-sm">
+                      <span
+                        className={`font-bold px-2 py-1 rounded-full text-xs ${
+                          patient.commission.includes("-")
+                            ? "text-white bg-red-500"
+                            : "text-white bg-green-500"
+                        }`}
+                      >
+                        {patient.commission}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-600">
+                      {patient.transferDate}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </>
         ) : (
           <div className="text-center py-12">
@@ -664,9 +651,7 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
               Aucun patient trouvé
             </h3>
             <p className="text-slate-500">
-              {searchTerm
-                ? `Aucun patient trouvé pour "${searchTerm}"`
-                : selectedMonth
+              {selectedMonth
                 ? `Aucune donnée de ${
                     selectedType === "prescription"
                       ? "prescription"
@@ -679,34 +664,34 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
       </div>
       {/* Pagination */}
       {filteredPatients.length > 0 && (
-        <div className="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50">
-          <div className="flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+          <div className="flex items-center justify-center gap-2">
             <button
               onClick={goToPreviousPage}
               disabled={currentPage === 1}
-              className="flex items-center px-3 py-2 text-sm text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center px-4 py-2 text-sm text-black font-bold hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
-              <span>Précédent</span>
+              Précédent
             </button>
-            <span className="text-sm text-black font-bold">
+            <span className="px-4 py-2 rounded-lg bg-gray-100 text-sm font-bold">
               Page {currentPage} sur {totalPages}
             </span>
             <button
               onClick={goToNextPage}
               disabled={currentPage === totalPages}
-              className="flex items-center px-3 py-2 text-sm text-black font-bold hover:text-black hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center px-4 py-2 text-sm text-black font-bold hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>Suivant</span>
+              Suivant
               <ChevronRight className="w-4 h-4 ml-1" />
             </button>
           </div>
         </div>
       )}
       {/* Commission Totale */}
-      <div className="px-4 sm:px-6 py-4 border-t-2 border-blue-200 bg-blue-50 sticky bottom-0">
-        <div className="text-center sm:text-right">
-          <span className="text-lg sm:text-xl font-semibold text-slate-800">
+      <div className="px-6 py-4 border-t-2 border-blue-200 bg-blue-50">
+        <div className="text-center">
+          <span className="text-xl font-semibold text-slate-800">
             Commission Totale:{" "}
             <span className="text-blue-600 font-bold">
               {getTotalCommission().toFixed(2)} FCFA
@@ -716,13 +701,12 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
             <p className="text-sm text-slate-600 mt-1">
               {selectedMonth} -{" "}
               {selectedType === "prescription" ? "Prescription" : "Réalisation"}{" "}
-              ({invoiceStatus === "invoiced" ? "Facturé" : "Non facturé"})
+              ({invoiceStatus === "invoiced" ? "Facturé" : "Non Facturé"})
             </p>
           )}
         </div>
       </div>
-      {/* Section Note */}
-      <div className="px-4 sm:px-6 py-4 border-t-2 border-gray-200 bg-gray-50">
+      <div className="px-6 py-4 border-t-2 border-gray-200 bg-gray-50">
         <div className="text-center md:text-left">
           <h3 className="text-sm font-medium text-slate-700 mb-3">Note:</h3>
           <ul className="text-sm text-slate-600 space-y-2 list-disc list-inside">
@@ -749,4 +733,4 @@ const MobilePatientsContent: React.FC<MobilePatientsContentProps> = ({
   );
 };
 
-export default MobilePatientsContent;
+export default PatientsView;
